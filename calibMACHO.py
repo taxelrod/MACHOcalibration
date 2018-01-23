@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 As input, take a F_n.m file containing the photometry information in ANU format
 for field n, tile m, and DumpStar_n.txt, containing the star information for
@@ -8,11 +9,18 @@ Output a calibrated F_n.m_Cal file in the same ANU format
 The input data in column number REPLACE_COL on output is replaced with a value
 showing whether the full calibration was done (value=0) or only the generic
 zeropoint applied (value=1)
+
+Calibration procedure is based on David Alves' Fortran code, which is in calib_lc4.f, and his data
+files in directory CO.
+
+The original Fortran code has been modified to account for exposure times which are not 300 sec, in conformance
+with the formulation in the 1999 paper PASP,111,1539
 """
 
 import numpy as np
 import string
 import calib
+import sys
 
 debug = False
 REPLACE_COL = 38
@@ -114,6 +122,11 @@ def calibPhot(F_fileName, DumpStar_fileName, Fcal_fileName):
             fCal.write(outputLine)
 
             
-            
+if __name__ == "__main__":
+    
+    if len(sys.argv) != 4:
+        sys.exit('Usage: ./calibMACHO.py F_field.tile, DumpStar_field.txt, outputFile')
+    
+    calibPhot(sys.argv[1], sys.argv[2], sys.argv[3])
         
         

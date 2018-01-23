@@ -1,0 +1,33 @@
+!    -*- f90 -*-
+! Note: the context of this file is case sensitive.
+
+python module calib ! in 
+    interface  ! in :calib
+        subroutine get_bj(fld,ck,bj_e1,bj_w1,bj_colo) ! in :calib:calib_lc4.f
+            integer :: fld
+            integer :: ck
+            real intent(out) :: bj_e1
+            real intent(out) :: bj_w1
+            real intent(out) :: bj_colo
+        end subroutine get_bj
+        subroutine get_co(fld,ck,rco) ! in :calib:calib_lc4.f
+            integer :: fld
+            integer :: ck
+            real intent(out) :: rco
+        end subroutine get_co
+        subroutine get_zps98(fld,ck,exp,xt,a0,a1,b0,b1,ierr) ! in :calib:calib_lc4.f
+            integer :: fld
+            integer :: ck
+            real :: exp
+            real intent(out) :: xt
+            real intent(out) :: a0
+            real intent(out) :: a1
+            real intent(out) :: b0
+            real intent(out) :: b1
+            integer intent(out) :: ierr
+        end subroutine get_zps98
+    end interface 
+end python module calib
+
+! This file was auto-generated with f2py (version:2).
+! See http://cens.ioc.ee/projects/f2py2e/

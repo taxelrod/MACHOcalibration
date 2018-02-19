@@ -215,7 +215,7 @@ c	open bj.data and get "west" coefficient for chunk
 c	--------------------------------------------------------
 
 	name = 'CO/bj.data'
-	open (unit=9,file=name)
+	open (unit=9,file=name,status='OLD')
 	
 	do 100 i=1,m
 	  read (9,*,END=110) c(i),b(i)
@@ -283,14 +283,14 @@ c	--------------------------------------------------------
 c	open psf_mcol file (by field) and get mcol for chunk
 c	--------------------------------------------------------
 
-	open (unit=9,file='foobar')
+	open (unit=9,file='foobar',status='OLD')
 	write (9,'(I3.3)') fld
 	rewind(9)
 	read (9,'(A3)') cfld
 	close(9)
 
 	name = 'CO/psf_mcol.'//cfld
-	open (unit=9,file=name)
+	open (unit=9,file=name,status='OLD')
 
 	do 500 i=1,m
 		read (9,*,END=510) n,c(i),mc(i),n
@@ -333,7 +333,7 @@ c	--------------------------------------------------------
 	close(9)
 
 	name = 'CO/tmpl_co.'//cfld
-	open (unit=9,file=name)
+	open (unit=9,file=name,status='OLD')
 
 	do 100 i=1,m
 	  read (9,*,END=110) c(i),b,r(i)
@@ -386,7 +386,7 @@ c       --------------------------------------------------------
 c       open and read "tmpl_data98" file
 c       --------------------------------------------------------
 
-        open (unit=19, file='CO/tmpl_data98')
+        open (unit=19, file='CO/tmpl_data98',status='OLD')
         read (19,*)
         read (19,*)
         read (19,*)

@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.backends.backend_pdf
@@ -10,21 +11,100 @@ Match the psf stars to stars in the photometry file, and output a lightcurve
 file for each star, and a summary file for the whole set.
 """
 
-def psfAnalysis(psfFileName, photFileName, outputLcPrefix, outputSummaryName):
-    psfData = np.loadtxt(psfFileName)
-#    photData = np.loadtxt(photFileName, delimiter=';', converters={6: lambda s: (1.0 if s.startswith('W') else -1.0)})
+def psfAnalysisDriver(field, psfFileName, photFileDir, outputLcPrefix, outputSummaryName):
+    
+    psfData = np.loadtxt(psfFileName, skiprows=1)
 
-    photData = np.loadtxt(photFileName, delimiter=';', usecols=(2,3,4,9,10,24,25))
+    # find the set of tiles referenced in psfFile, and their corresponding photometry files
 
-    Fsummary = open(outputSummaryName, 'w')
+    psfTiles = psfData[:, 0]
+
+    uniqueTiles = np.unique(psfTiles)
+
+    bailout = False
+    for tile in uniqueTiles:
+        photFileName = '%s/F_%d.%d' % (photFileDir, field, tile)
+        if not os.access(photFileName, os.F_OK):
+            print photFileName + ' not found'
+            bailout = True
+
+    if bailout:
+        return
+    
+    # process the photometry files
+
+    plotFileName = outputLcPrefix + '_plt.pdf'
+    graphicsPdf = matplotlib.backends.backend_pdf.PdfPages(plotFileName)
+
+    Initialized = False
+    for tile in uniqueTiles:
+        photFileName = '%s/F_%d.%d' % (photFileDir, field, tile)
+        lcTmp = psfAnalysis(psfFileName, photFileName, outputLcPrefix, outputSummaryName, graphicsPdf)
+        if not Initialized:
+            lcAll = lcTmp
+            Initialized = True
+        else:
+            lcAll = np.append(lcAll, lcTmp, axis=0)
+
+    # Do the Dave Bennett statistics
+
+    times = np.unique(lcAll[:,0])
+    ntimes = len(times)
+    tobs = np.zeros((ntimes))
+    rsigcut = np.zeros((ntimes))
+    bsigcut = np.zeros((ntimes))
+    
+    for (i,t) in enumerate(times):
+        tobs[i] = t
+        idx = np.where(lcAll[:,0]==t)
+        rerr = lcAll[idx,2]
+        rdev = lcAll[idx,5]
+        berr = lcAll[idx,3]
+        bdev = lcAll[idx,6]
+        rwt = 1./(rerr**2 + 0.01**2)
+        rwtvar = np.mean((rdev - rdev.mean())**2*rwt)/np.mean(rwt)
+        rsigcut[i] = 2.5*np.sqrt(rwtvar)
+        bwt = 1./(berr**2 + 0.01**2)
+        bwtvar = np.mean((bdev - bdev.mean())**2*bwt)/np.mean(bwt)
+        bsigcut[i] = 2.5*np.sqrt(bwtvar)
+
+    fig=plt.figure()
+    plt.subplot(211)
+    plt.title('2.5 sigma cut levels')
+    plt.plot(tobs, rsigcut, 'r.')
+    plt.plot(tobs, -rsigcut, 'r.')
+    plt.ylim(-0.5, 0.5)
+    plt.subplot(212)
+    plt.plot(tobs, bsigcut, 'b.')
+    plt.plot(tobs, -bsigcut, 'b.')
+    plt.ylim(-0.5, 0.5)
+    graphicsPdf.savefig(fig)
+    plt.close(fig)
+    
+
+    graphicsPdf.close()
+    
+
+def psfAnalysis(psfFileName, photFileName, outputLcPrefix, outputSummaryName, pdf):
+
+    Fpsf = open(psfFileName)
+    psfLine = Fpsf.readline()
+    templateStr = psfLine.split()
+    templateObs = int(templateStr[0])
+    Fpsf.close()
+    
+    psfData = np.loadtxt(psfFileName, skiprows=1)
+
+    photData = np.loadtxt(photFileName, delimiter=';', usecols=(2,3,4,9,10,24,25,5))
+
+    Fsummary = open(outputSummaryName, 'a+')
 
     photTile = np.fix(photData[:,0])
     photSeq = np.fix(photData[:,1])
 
     nPsf = psfData.shape[0]
 
-    plotFileName = outputLcPrefix + '_plt.pdf'
-    pdf = matplotlib.backends.backend_pdf.PdfPages(plotFileName)
+    Initialized = False
     
     for i in range(nPsf):
         psfStar = psfData[i, :]
@@ -41,27 +121,60 @@ def psfAnalysis(psfFileName, photFileName, outputLcPrefix, outputSummaryName):
             rerr = psfPhotLc[:,4]
             bmag = psfPhotLc[:,5]
             berr = psfPhotLc[:,6]
-            igood = np.where((rmag > -15) & (bmag > -15) & (rmag <= -2) & (bmag <= -2))
+            obsid = psfPhotLc[:,7]
+            igood = np.where((rmag > -15) & (bmag > -15) & (rmag <= -2) & (bmag <= -2) & (rerr < 0.2) & (berr < 0.2))
             ngood = len(igood[0])
             lcrMedian = np.median(rmag[igood])
             lcrStdev = np.std(rmag[igood])
             lcbMedian = np.median(bmag[igood])
             lcbStdev = np.std(bmag[igood])
+            templateIdx = np.where(obsid==templateObs)
+            lcrTemplate = rmag[templateIdx]
+            lcbTemplate = bmag[templateIdx]
+            rdev = rmag - lcrTemplate
+            bdev = bmag - lcbTemplate
+
             print >>Fsummary, psfStarTile, psfStarSeq, psfStarMag0, psfStarMag1, ngood, lcrMedian, lcrStdev, lcbMedian, lcbStdev
             Flc = open('%s_%d_%d.dat' % (outputLcPrefix, psfStarTile, psfStarSeq), 'w')
-            print >>Flc, '# t rmag rerr bmag berr'
-            for i in igood[0]:
-                print >>Flc, time[i], rmag[i], rerr[i], bmag[i], berr[i]
+            print >>Flc, '# t rmag rerr bmag berr rdev bdev'
+
+            igood = igood[0]
+            ngood = len(igood)
+            
+            for i in igood:
+                print >>Flc, time[i], rmag[i], rerr[i], bmag[i], berr[i], rdev[i], bdev[i]
             Flc.close()
+
+            # append to output array
+            lcTmp = np.zeros((ngood, 7))
+            lcTmp[:,0] = time[igood]
+            lcTmp[:,1] = rmag[igood]
+            lcTmp[:,2] = rerr[igood]
+            lcTmp[:,3] = bmag[igood]
+            lcTmp[:,4] = berr[igood]
+            lcTmp[:,5] = rdev[igood]
+            lcTmp[:,6] = bdev[igood]
+            if not Initialized:
+                lcOut = lcTmp
+                Initialized = True
+            else:
+                lcOut = np.append(lcOut, lcTmp, axis=0)
+                
+            # make plots
             fig=plt.figure()
             plt.subplot(311)
             plt.title('%s LC %d_%d' % (psfFileName, psfStarTile, psfStarSeq))
             plt.plot(time[igood]-time[0], rmag[igood], 'r.')
+            plt.plot(time[templateIdx]-time[0],rmag[templateIdx], 'g*', markersize=15)
             plt.subplot(312)
             plt.plot(time[igood]-time[0], bmag[igood], 'b.')
+            plt.plot(time[templateIdx]-time[0],bmag[templateIdx], 'g*', markersize=15)
             plt.subplot(313)
             plt.plot(bmag[igood] - rmag[igood], bmag[igood], 'b.')
+            plt.plot(bmag[templateIdx] - rmag[templateIdx], bmag[templateIdx], 'g*', markersize=15)
             pdf.savefig(fig)
             plt.close(fig)
 
-    pdf.close()
+    Fsummary.close()
+    return lcOut
+

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-As input, take a F_n.m file containing calibrated photometry information in ANU format
+As input, take a F_n.m file containing photometry information in ANU format
 for field n, tile m.
 
 Output a light curve statistics file including for each star in the input file: V and R  
@@ -13,7 +13,7 @@ import sys
 
 debug = False
 
-def lcStats(F_fileName, Fstat_fileName):
+def lcStats(F_fileName, Fstat_fileName, filter=True):
 
 
     fPhot = open(F_fileName)
@@ -37,6 +37,9 @@ def lcStats(F_fileName, Fstat_fileName):
             rerr = float(photFields[10])
             bmag = float(photFields[24])
             rerr = float(photFields[10])
+            if filter:
+                if rmag <= -15 or bmag <= -15 or rmag > -2 or bmag > -2:
+                    continue
             if field != activeField or tile != activeTile:
                 if activeField == 0:
                     activeField = field

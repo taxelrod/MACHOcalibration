@@ -11,7 +11,7 @@ Match the psf stars to stars in the photometry file, and output a lightcurve
 file for each star, and a summary file for the whole set.
 """
 
-def psfAnalysisDriver(field, psfFileName, photFileDir, outputLcPrefix, outputSummaryName):
+def psfAnalysisDriver(field, psfFileName, photFileDir, outputLcPrefix, outputSummaryName, Plot=True):
     
     psfData = np.loadtxt(psfFileName, skiprows=1)
 
@@ -33,8 +33,6 @@ def psfAnalysisDriver(field, psfFileName, photFileDir, outputLcPrefix, outputSum
     
     # process the photometry files
 
-    plotFileName = outputLcPrefix + '_plt.pdf'
-    graphicsPdf = matplotlib.backends.backend_pdf.PdfPages(plotFileName)
 
     Initialized = False
     
@@ -49,66 +47,41 @@ def psfAnalysisDriver(field, psfFileName, photFileDir, outputLcPrefix, outputSum
             lcAll = np.append(lcAll, lcTmp, axis=0)
             lcListAll.append(lcList)
 
-    
-    # Do the Dave Bennett statistics
+    (tobs, rsigcut, bsigcut) = psfStats(lcAll, outputSummaryName)
 
-    times = np.unique(lcAll[:,0])
-    ntimes = len(times)
-    tobs = np.zeros((ntimes))
-    rsigcut = np.zeros((ntimes))
-    bsigcut = np.zeros((ntimes))
-    
-    Fsummary = open(outputSummaryName, 'a+')
+    if Plot:
+        plotFileName = outputLcPrefix + '_plt.pdf'
+        graphicsPdf = matplotlib.backends.backend_pdf.PdfPages(plotFileName)
 
-    print >>Fsummary, '# t, r2.5sig b2.5sig'
-    
-    for (i,t) in enumerate(times):
-        tobs[i] = t
-        idx = np.where(lcAll[:,0]==t)
-        print 'matching times at time ', t, len(idx[0])
-        rerr = lcAll[idx,2]
-        rdev = lcAll[idx,5]
-        berr = lcAll[idx,3]
-        bdev = lcAll[idx,6]
-        rwt = 1./(rerr**2 + 0.01**2)
-        rwtvar = np.mean((rdev - rdev.mean())**2*rwt)/np.mean(rwt)
-        rsigcut[i] = 2.5*np.sqrt(rwtvar)
-        bwt = 1./(berr**2 + 0.01**2)
-        bwtvar = np.mean((bdev - bdev.mean())**2*bwt)/np.mean(bwt)
-        bsigcut[i] = 2.5*np.sqrt(bwtvar)
-        print >>Fsummary, tobs[i], rsigcut[i], bsigcut[i]
+        fig=plt.figure()
+        plt.subplot(211)
+        plt.title('2.5 sigma cut levels')
+        plt.plot(tobs, rsigcut, 'r.')
+        plt.plot(tobs, -rsigcut, 'r.')
+        plt.ylim(-0.5, 0.5)
+        plt.subplot(212)
+        plt.plot(tobs, bsigcut, 'b.')
+        plt.plot(tobs, -bsigcut, 'b.')
+        plt.ylim(-0.5, 0.5)
+        graphicsPdf.savefig(fig)
+        plt.close(fig)
 
-    Fsummary.close()
-    
-    fig=plt.figure()
-    plt.subplot(211)
-    plt.title('2.5 sigma cut levels')
-    plt.plot(tobs, rsigcut, 'r.')
-    plt.plot(tobs, -rsigcut, 'r.')
-    plt.ylim(-0.5, 0.5)
-    plt.subplot(212)
-    plt.plot(tobs, bsigcut, 'b.')
-    plt.plot(tobs, -bsigcut, 'b.')
-    plt.ylim(-0.5, 0.5)
-    graphicsPdf.savefig(fig)
-    plt.close(fig)
+        # Now plot the accumulated light curves
 
-    # Now plot the accumulated light curves
-
-    for lc in lcListAll:
-        if type(lc[0]) == str:
-            FlcName, lcrTemplate, lcbTemplate, tTemplate = lc
-            lcPlot(FlcName, lcrTemplate, lcbTemplate, tTemplate, tobs, rsigcut, bsigcut, graphicsPdf)
-        else:
-            for l in lc:
-                FlcName, lcrTemplate, lcbTemplate, tTemplate = l
+        for lc in lcListAll:
+            if type(lc[0]) == str:
+                FlcName, lcrTemplate, lcbTemplate, tTemplate = lc
                 lcPlot(FlcName, lcrTemplate, lcbTemplate, tTemplate, tobs, rsigcut, bsigcut, graphicsPdf)
-                
-            
-        lcPlot(FlcName, lcrTemplate, lcbTemplate, tTemplate, tobs, rsigcut, bsigcut, graphicsPdf)
-    
+            else:
+                for l in lc:
+                    FlcName, lcrTemplate, lcbTemplate, tTemplate = l
+                    lcPlot(FlcName, lcrTemplate, lcbTemplate, tTemplate, tobs, rsigcut, bsigcut, graphicsPdf)
 
-    graphicsPdf.close()
+
+            lcPlot(FlcName, lcrTemplate, lcbTemplate, tTemplate, tobs, rsigcut, bsigcut, graphicsPdf)
+
+
+        graphicsPdf.close()
     
 
 def psfAnalysis(psfFileName, photFileName, outputLcPrefix, outputSummaryName):
@@ -192,6 +165,62 @@ def psfAnalysis(psfFileName, photFileName, outputLcPrefix, outputSummaryName):
 
     Fsummary.close()
     return lcOut, lcList
+
+def psfStats(lcAll, outputSummaryName):
+    
+
+    times = np.unique(lcAll[:,0])
+    ntimes = len(times)
+    tobs = np.zeros((ntimes))
+    rsigcut = np.zeros((ntimes))
+    bsigcut = np.zeros((ntimes))
+    
+    Fsummary = open(outputSummaryName, 'a+')
+
+    
+    # Do the Dave Bennett sigma clipping stats
+    
+    for (i,t) in enumerate(times):
+        tobs[i] = t
+        idx = np.where(lcAll[:,0]==t)
+        print 'matching times at time ', t, len(idx[0])
+        rerr = lcAll[idx,2]
+        rdev = lcAll[idx,5]
+        berr = lcAll[idx,3]
+        bdev = lcAll[idx,6]
+        rwt = 1./(rerr**2 + 0.01**2)
+        rwtvar = np.mean((rdev - rdev.mean())**2*rwt)/np.mean(rwt)
+        rsigcut[i] = 2.5*np.sqrt(rwtvar)
+        bwt = 1./(berr**2 + 0.01**2)
+        bwtvar = np.mean((bdev - bdev.mean())**2*bwt)/np.mean(bwt)
+        bsigcut[i] = 2.5*np.sqrt(bwtvar)
+
+    # with the sigma clipping thresholds in hand, calculate, for the valid psf set at each
+    # time, the weighted means of rdev and bdev.  If we're doing things correctly, these should
+    # all be close to zero
+
+    print >>Fsummary, '# tobs rsigcut bsigcut rdevWtdMean bdevWtdMean numr numb'
+    
+    for (i,t) in enumerate(times):
+        tobs[i] = t
+        idx = np.where(lcAll[:,0]==t)
+        rerr = lcAll[idx,2]
+        rdev = lcAll[idx,5]
+        rwt = 1./(rerr**2 + 0.01**2)
+        idrgood = np.where(np.abs(rdev -rdev.mean()) < rsigcut[i])
+        rdevWtdMean = np.sum(rdev[idrgood]*rwt[idrgood])/np.sum(rwt[idrgood])
+        
+        berr = lcAll[idx,3]
+        bdev = lcAll[idx,6]
+        bwt = 1./(berr**2 + 0.01**2)
+        idbgood = np.where(np.abs(bdev - bdev.mean()) < bsigcut[i])
+        bdevWtdMean = np.sum(bdev[idbgood]*bwt[idbgood])/np.sum(bwt[idbgood])
+
+        print >>Fsummary, tobs[i], rsigcut[i], bsigcut[i], rdevWtdMean, bdevWtdMean, len(idrgood[0]), len(idbgood[0])
+
+    Fsummary.close()
+    
+    return tobs, rsigcut, bsigcut
 
 def lcPlot(lcFileName, lcrTemplate, lcbTemplate, tTemplate, tSigcut, rSigcut, bSigcut, pdf):
 

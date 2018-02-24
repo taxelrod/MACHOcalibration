@@ -1,5 +1,7 @@
 import os
+import re
 import numpy as np
+from  numpy.linalg import lstsq
 import matplotlib.pyplot as plt
 import matplotlib.backends.backend_pdf
 
@@ -11,7 +13,7 @@ Match the psf stars to stars in the photometry file, and output a lightcurve
 file for each star, and a summary file for the whole set.
 """
 
-def psfAnalysisDriver(field, psfFileName, photFileDir, outputLcPrefix, outputSummaryName, Plot=True):
+def psfAnalysisDriver(field, psfFileName, photFileDir, outputLcPrefix, outputSummaryName, sigCutSummaryName, Plot=True):
     
     psfData = np.loadtxt(psfFileName, skiprows=1)
 
@@ -35,19 +37,38 @@ def psfAnalysisDriver(field, psfFileName, photFileDir, outputLcPrefix, outputSum
 
 
     Initialized = False
+    lcListAll = list()
     
     for tile in uniqueTiles:
         photFileName = '%s/F_%d.%d' % (photFileDir, field, tile)
-        lcTmp, lcList = psfAnalysis(psfFileName, photFileName, outputLcPrefix, outputSummaryName)
+        lcTmp, lcListX = psfAnalysis(psfFileName, photFileName, outputLcPrefix, outputSummaryName)
+        # flatten lclistX here, append individuals to lcListAll
+        if type(lcListX[0]) == str:   # lcListX is the 5 items for a single lightcurve
+            FlcName, lcrTemplate, lcbTemplate, tTemplate, wsCoeff = lcListX
+            lcListAll.append([FlcName, lcrTemplate, lcbTemplate, tTemplate, wsCoeff])
+        else:                         # lcListX is a list of 5 item lists
+            for l in lcListX:
+                FlcName, lcrTemplate, lcbTemplate, tTemplate, wsCoeff = l
+                lcListAll.append([FlcName, lcrTemplate, lcbTemplate, tTemplate, wsCoeff])
+       
         if not Initialized:
             lcAll = lcTmp
-            lcListAll = lcList
             Initialized = True
         else:
             lcAll = np.append(lcAll, lcTmp, axis=0)
-            lcListAll.append(lcList)
 
-    (tobs, rsigcut, bsigcut) = psfStats(lcAll, outputSummaryName)
+    # Calculate 2.5 sigma cuts
+
+    (tobs, rsigcut, bsigcut) = psfStats(lcAll, sigCutSummaryName)
+
+    # Calculate WS shifts in per-obs magnitude calibrations
+
+    deltaBmag = calcWSshift(lcListAll, outputSummaryName, tobs, rsigcut, bsigcut)
+    Fout = open('WSshift.dat', 'w')
+    for (i, dm) in enumerate(deltaBmag):
+        print >>Fout, tobs[i], dm
+
+    Fout.close()
 
     if Plot:
         plotFileName = outputLcPrefix + '_plt.pdf'
@@ -69,17 +90,8 @@ def psfAnalysisDriver(field, psfFileName, photFileDir, outputLcPrefix, outputSum
         # Now plot the accumulated light curves
 
         for lc in lcListAll:
-            if type(lc[0]) == str:
-                FlcName, lcrTemplate, lcbTemplate, tTemplate = lc
-                lcPlot(FlcName, lcrTemplate, lcbTemplate, tTemplate, tobs, rsigcut, bsigcut, graphicsPdf)
-            else:
-                for l in lc:
-                    FlcName, lcrTemplate, lcbTemplate, tTemplate = l
-                    lcPlot(FlcName, lcrTemplate, lcbTemplate, tTemplate, tobs, rsigcut, bsigcut, graphicsPdf)
-
-
+            FlcName, lcrTemplate, lcbTemplate, tTemplate, wsCoeff = lc
             lcPlot(FlcName, lcrTemplate, lcbTemplate, tTemplate, tobs, rsigcut, bsigcut, graphicsPdf)
-
 
         graphicsPdf.close()
     
@@ -97,7 +109,8 @@ def psfAnalysis(psfFileName, photFileName, outputLcPrefix, outputSummaryName):
     photData = np.loadtxt(photFileName, delimiter=';', usecols=(2,3,4,9,10,24,25,5))
 
     Fsummary = open(outputSummaryName, 'a+')
-
+    print >>Fsummary, '# tile seq Mag0 Mag1 ngood lcrMedian lcrStdev lcbMedian lcbStdev wsCoeff0 wsCoeff1'
+    
     photTile = np.fix(photData[:,0])
     photSeq = np.fix(photData[:,1])
 
@@ -121,12 +134,23 @@ def psfAnalysis(psfFileName, photFileName, outputLcPrefix, outputSummaryName):
             bmag = psfPhotLc[:,5]
             berr = psfPhotLc[:,6]
             obsid = psfPhotLc[:,7]
+
+            # determine good points
             igood = np.where((rmag > -15) & (bmag > -15) & (rmag <= -2) & (bmag <= -2) & (rerr < 0.2) & (berr < 0.2))
             ngood = len(igood[0])
-            lcrMedian = np.median(rmag[igood])
-            lcrStdev = np.std(rmag[igood])
-            lcbMedian = np.median(bmag[igood])
-            lcbStdev = np.std(bmag[igood])
+
+            # keep only good points
+            time = time[igood]
+            rmag = rmag[igood]
+            rerr = rerr[igood]
+            bmag = bmag[igood]
+            berr = berr[igood]
+            obsid = obsid[igood]
+            
+            lcrMedian = np.median(rmag)
+            lcrStdev = np.std(rmag)
+            lcbMedian = np.median(bmag)
+            lcbStdev = np.std(bmag)
             templateIdx = np.where(obsid==templateObs)
             lcrTemplate = rmag[templateIdx]
             lcbTemplate = bmag[templateIdx]
@@ -134,39 +158,76 @@ def psfAnalysis(psfFileName, photFileName, outputLcPrefix, outputSummaryName):
             rdev = rmag - lcrTemplate
             bdev = bmag - lcbTemplate
 
-            print >>Fsummary, psfStarTile, psfStarSeq, psfStarMag0, psfStarMag1, ngood, lcrMedian, lcrStdev, lcbMedian, lcbStdev
+            wsCoeff = fitWS(rdev, rerr, bdev, berr)
+            
+            print >>Fsummary, psfStarTile, psfStarSeq, psfStarMag0, psfStarMag1, ngood, lcrMedian, lcrStdev, lcbMedian, lcbStdev, wsCoeff[0], wsCoeff[1]
             FlcName = '%s_%d_%d.dat' % (outputLcPrefix, psfStarTile, psfStarSeq)
             Flc = open(FlcName, 'w')
             print >>Flc, '# t rmag rerr bmag berr rdev bdev'
-
-            igood = igood[0]
-            ngood = len(igood)
             
-            for i in igood:
+            for i in range(ngood):
                 print >>Flc, time[i], rmag[i], rerr[i], bmag[i], berr[i], rdev[i], bdev[i]
             Flc.close()
 
             # append to output array
             lcTmp = np.zeros((ngood, 7))
-            lcTmp[:,0] = time[igood]
-            lcTmp[:,1] = rmag[igood]
-            lcTmp[:,2] = rerr[igood]
-            lcTmp[:,3] = bmag[igood]
-            lcTmp[:,4] = berr[igood]
-            lcTmp[:,5] = rdev[igood]
-            lcTmp[:,6] = bdev[igood]
+            lcTmp[:,0] = time
+            lcTmp[:,1] = rmag
+            lcTmp[:,2] = rerr
+            lcTmp[:,3] = bmag
+            lcTmp[:,4] = berr
+            lcTmp[:,5] = rdev
+            lcTmp[:,6] = bdev
             if not Initialized:
                 lcOut = lcTmp
-                lcList = list([[FlcName, lcrTemplate, lcbTemplate, tTemplate]])
+                lcList = list([[FlcName, lcrTemplate, lcbTemplate, tTemplate, wsCoeff]])
                 Initialized = True
             else:
                 lcOut = np.append(lcOut, lcTmp, axis=0)
-                lcList.append(list([FlcName, lcrTemplate, lcbTemplate, tTemplate]))
+                lcList.append(list([FlcName, lcrTemplate, lcbTemplate, tTemplate, wsCoeff]))
 
     Fsummary.close()
     return lcOut, lcList
 
-def psfStats(lcAll, outputSummaryName):
+def fitWS(rdev, rerr, bdev, berr):
+
+    bMinusr = bdev - rdev
+    WScoeff = np.polyfit(bMinusr, bdev, 1)
+    
+    return WScoeff
+
+def calcWSshift(lcListAll, outputSummaryName, tobs, rsigcut, bsigcut):
+
+    lcSummaryDat = np.loadtxt(outputSummaryName)
+    tile = lcSummaryDat[:,0]
+    seq = lcSummaryDat[:,1]
+    wsCoeff0 = lcSummaryDat[:,9]
+    wsCoeff1 = lcSummaryDat[:,10]
+
+    wsShift = np.zeros(len(tobs))
+    nptsWsShift = np.zeros(len(tobs))
+    FlcNameRe = re.compile('.*_(\d+)_(\d+).dat')
+    for lc in lcListAll:
+        FlcName, lcrTemplate, lcbTemplate, tTemplate, wsCoeff = lc
+        matchName = FlcNameRe.match(FlcName)
+        thisTile = int(matchName.group(1))
+        thisSeq = int(matchName.group(2))
+        lcDat = np.loadtxt(FlcName)
+        time = lcDat[:,0]
+        rdev = lcDat[:,5]
+        bdev = lcDat[:,6]
+        idx = np.where((tile==thisTile) & (seq==thisSeq))
+        ws0 = wsCoeff[0]
+        ws1 = wsCoeff[1]
+        for (i, t) in enumerate(time):
+            idt = np.where(tobs==t)
+            if np.abs(bdev[i]) < bsigcut[idt]:
+                wsPoly = np.array([ws0, ws1])
+                wsShift[idt] += np.polyval(wsPoly, bdev[i]-rdev[i])
+                nptsWsShift[idt] += 1 
+    return wsShift/nptsWsShift
+
+def psfStats(lcAll, sigCutSummaryName):
     
 
     times = np.unique(lcAll[:,0])
@@ -175,7 +236,7 @@ def psfStats(lcAll, outputSummaryName):
     rsigcut = np.zeros((ntimes))
     bsigcut = np.zeros((ntimes))
     
-    Fsummary = open(outputSummaryName, 'a+')
+    FsigCutSummary= open(sigCutSummaryName, 'w')
 
     
     # Do the Dave Bennett sigma clipping stats
@@ -199,7 +260,7 @@ def psfStats(lcAll, outputSummaryName):
     # time, the weighted means of rdev and bdev.  If we're doing things correctly, these should
     # all be close to zero
 
-    print >>Fsummary, '# tobs rsigcut bsigcut rdevWtdMean bdevWtdMean numr numb'
+    print >>FsigCutSummary, '# tobs rsigcut bsigcut rdevWtdMean bdevWtdMean numr numb'
     
     for (i,t) in enumerate(times):
         tobs[i] = t
@@ -216,9 +277,9 @@ def psfStats(lcAll, outputSummaryName):
         idbgood = np.where(np.abs(bdev - bdev.mean()) < bsigcut[i])
         bdevWtdMean = np.sum(bdev[idbgood]*bwt[idbgood])/np.sum(bwt[idbgood])
 
-        print >>Fsummary, tobs[i], rsigcut[i], bsigcut[i], rdevWtdMean, bdevWtdMean, len(idrgood[0]), len(idbgood[0])
+        print >>FsigCutSummary, tobs[i], rsigcut[i], bsigcut[i], rdevWtdMean, bdevWtdMean, len(idrgood[0]), len(idbgood[0])
 
-    Fsummary.close()
+    FsigCutSummary.close()
     
     return tobs, rsigcut, bsigcut
 

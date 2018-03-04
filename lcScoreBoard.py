@@ -35,6 +35,7 @@ class LcScoreBoard(object):
         rerr = lcData[:,2]
         bmag = lcData[:,3]
         berr = lcData[:,4]
+        obsid = lcData[:,5]
 
         if self.nPsf == 0:
             # we're going to have at least one lightcurve - allocate the class member arrays
@@ -43,6 +44,7 @@ class LcScoreBoard(object):
             self.validR = np.ones((ntPoints), dtype=bool) # all points in the first LC are valid
             self.validB = np.ones((ntPoints), dtype=bool) # all points in the first LC are valid
             self.time = time.flatten() # remove extraneous dimension from time
+            self.obsid = obsid.flatten() # remove extraneous dimension from obsid
             self.rmag = np.zeros((ntPoints), dtype=float)
             self.rmag = rmag
             self.rerr = np.zeros((ntPoints), dtype=float)
@@ -81,6 +83,8 @@ class LcScoreBoard(object):
                     # add new time to self.time, which means adding new column to self.valid, self.rmag, etc
                     self.time.resize((self.nTime + 1))
                     self.time[self.nTime] = t
+                    self.obsid.resize((self.nTime + 1))
+                    self.obsid[self.nTime] = obsid[it]
                     self.validR = np.hstack((self.validR, np.zeros((self.nPsf,1), dtype=bool)))
                     self.validB = np.hstack((self.validB, np.zeros((self.nPsf,1), dtype=bool)))
                     self.rmag = np.hstack((self.rmag, np.zeros((self.nPsf,1), dtype=float)))
@@ -108,14 +112,31 @@ class LcScoreBoard(object):
         self.psfDict[id] = self.nPsf
         self.log.flush()
 
+    def setTemplateObs(self, templateObs):
+
+        templateId = np.where(self.obsid==templateObs)[0]
+        if len(templateId) == 0:
+            raise ValueError, 'template obs %d not found' % templateObsR
+        else:
+            templateRmag = self.rmag[:,templateId]  # template R mag for each psf star
+            templateBmag = self.bmag[:,templateId]  # template B mag for each psf star
+
+        # process full set of lightcurves, creating self.rdev and self.bdev
+        self.rdev = np.zeros((self.nPsf, self.nTime), dtype=float)
+        self.bdev = np.zeros((self.nPsf, self.nTime), dtype=float)
+        
+        for n in range(self.nPsf):
+            self.rdev[n,:] = self.rmag[n,:] - templateRmag[n]
+            self.bdev[n,:] = self.bmag[n,:] - templateBmag[n]
+    
     def extractTime(self, t):
         idTime = np.where(t==self.time)[0]
         if len(idTime) == 0:
             return None, None, None, None
         else:
-            rmag = self.rmag[:,idTime]
+            rmag = self.rdev[:,idTime]
             rerr = self.rerr[:,idTime]
-            bmag = self.bmag[:,idTime]
+            bmag = self.bdev[:,idTime]
             berr = self.berr[:,idTime]
             idValidR = np.where(self.validR[:,idTime])[0]
             if len(idValidR)==0:
@@ -141,8 +162,8 @@ class LcScoreBoard(object):
         self.wsCoeffB = np.zeros((self.nPsf, 2), dtype=float)
         for i in range(self.nPsf):
             idValid = np.where((self.validR[i,:]) & (self.validB[i,:]))[0]
-            rmag = self.rmag[i,idValid]
-            bmag = self.bmag[i,idValid]
+            rmag = self.rdev[i,idValid]
+            bmag = self.bdev[i,idValid]
             bMinusr = bmag - rmag
             self.wsCoeffR[i,:] = np.polyfit(bMinusr, rmag, 1)
             self.wsCoeffB[i,:] = np.polyfit(bMinusr, bmag, 1)
@@ -152,6 +173,11 @@ class LcScoreBoard(object):
         Iterate over all times. For each time, calculate weighted stdev for each valid red and blue points.
         Mark points that exceed 2.5 sigma as invalid
         """
+        for (i, t) in enumerate(self.time):
+            rmag, rerr, bmag, berr = extractTime(t)
+            rwt = 1./(rerr**2 + 0.01**2)
+            rwtvar = np.mean((rdev - rdev.mean())**2*rwt)/np.mean(rwt)
+            rsigcut = 2.5*np.sqrt(rwtvar)
         
         pass
     def filterDDB(self):

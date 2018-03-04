@@ -40,7 +40,8 @@ class LcScoreBoard(object):
             # we're going to have at least one lightcurve - allocate the class member arrays
             ntPoints = lcData.shape[0]
             self.nTime = ntPoints
-            self.valid = np.ones((ntPoints), dtype=bool) # all points in the first LC are valid
+            self.validR = np.ones((ntPoints), dtype=bool) # all points in the first LC are valid
+            self.validB = np.ones((ntPoints), dtype=bool) # all points in the first LC are valid
             self.time = time.flatten() # remove extraneous dimension from time
             self.rmag = np.zeros((ntPoints), dtype=float)
             self.rmag = rmag
@@ -57,13 +58,15 @@ class LcScoreBoard(object):
             # add new row in each self.xx array for this light curve.  Set self.valid=False
             # for the row
             if self.nPsf==1:
-                self.valid = np.stack((self.valid, np.zeros((self.nTime), dtype=bool)))
+                self.validR = np.stack((self.validR, np.zeros((self.nTime), dtype=bool)))
+                self.validB = np.stack((self.validB, np.zeros((self.nTime), dtype=bool)))
                 self.rmag = np.stack((self.rmag, np.zeros((self.nTime), dtype=float)))
                 self.rerr = np.stack((self.rerr, np.zeros((self.nTime), dtype=float)))
                 self.bmag = np.stack((self.bmag, np.zeros((self.nTime), dtype=float)))
                 self.berr = np.stack((self.berr, np.zeros((self.nTime), dtype=float)))
             else:
-                self.valid = np.vstack((self.valid, np.zeros((self.nTime), dtype=bool)))
+                self.validR = np.vstack((self.validR, np.zeros((self.nTime), dtype=bool)))
+                self.validB = np.vstack((self.validB, np.zeros((self.nTime), dtype=bool)))
                 self.rmag = np.vstack((self.rmag, np.zeros((self.nTime), dtype=float)))
                 self.rerr = np.vstack((self.rerr, np.zeros((self.nTime), dtype=float)))
                 self.bmag = np.vstack((self.bmag, np.zeros((self.nTime), dtype=float)))
@@ -78,13 +81,15 @@ class LcScoreBoard(object):
                     # add new time to self.time, which means adding new column to self.valid, self.rmag, etc
                     self.time.resize((self.nTime + 1))
                     self.time[self.nTime] = t
-                    self.valid = np.hstack((self.valid, np.zeros((self.nPsf,1), dtype=bool)))
+                    self.validR = np.hstack((self.validR, np.zeros((self.nPsf,1), dtype=bool)))
+                    self.validB = np.hstack((self.validB, np.zeros((self.nPsf,1), dtype=bool)))
                     self.rmag = np.hstack((self.rmag, np.zeros((self.nPsf,1), dtype=float)))
                     self.rerr = np.hstack((self.rerr, np.zeros((self.nPsf,1), dtype=float)))
                     self.bmag = np.hstack((self.bmag, np.zeros((self.nPsf,1), dtype=float)))
                     self.berr = np.hstack((self.berr, np.zeros((self.nPsf,1), dtype=float)))
                     
-                    self.valid[self.nPsf-1, self.nTime] = True
+                    self.validR[self.nPsf-1, self.nTime] = True
+                    self.validB[self.nPsf-1, self.nTime] = True
                     self.rmag[self.nPsf-1, self.nTime] = rmag[it]
                     self.rerr[self.nPsf-1, self.nTime] = rerr[it]
                     self.bmag[self.nPsf-1, self.nTime] = bmag[it]
@@ -92,7 +97,8 @@ class LcScoreBoard(object):
                     self.nTime += 1
                 else:
                     # proper time column already exists. Stuff rmag, etc into that column for this row
-                    self.valid[self.nPsf-1, idTime] = True
+                    self.validR[self.nPsf-1, idTime] = True
+                    self.validB[self.nPsf-1, idTime] = True
                     self.rmag[self.nPsf-1, idTime] = rmag[it]
                     self.rerr[self.nPsf-1, idTime] = rerr[it]
                     self.bmag[self.nPsf-1, idTime] = bmag[it]
@@ -105,23 +111,36 @@ class LcScoreBoard(object):
     def extractTime(self, t):
         idTime = np.where(t==self.time)[0]
         if len(idTime) == 0:
-            return None
+            return None, None, None, None
         else:
             rmag = self.rmag[:,idTime]
             rerr = self.rerr[:,idTime]
             bmag = self.bmag[:,idTime]
             berr = self.berr[:,idTime]
-            idValid = np.where(self.valid[:,idTime])[0]
-            if len(idValid)==0:
-                return None
+            idValidR = np.where(self.validR[:,idTime])[0]
+            if len(idValidR)==0:
+                rmagT = None
+                rerrT = None
             else:
-                return rmag[idValid].flatten(), rerr[idValid].flatten(), bmag[idValid].flatten(), berr[idValid].flatten()
+                rmagT = rmag[idValidR].flatten()
+                rerrT = rmag[idValidR].flatten()
+
+            idValidB = np.where(self.validB[:,idTime])[0]
+            if len(idValidB)==0:
+                bmagT = None
+                berrT = None
+            else:
+                bmagT = bmag[idValidB].flatten()
+                berrT = bmag[idValidB].flatten()
+
+            
+            return rmagT, rerrT, bmagT, berrT
         
     def calcWsCoeffs(self):
         self.wsCoeffR = np.zeros((self.nPsf, 2), dtype=float)
         self.wsCoeffB = np.zeros((self.nPsf, 2), dtype=float)
         for i in range(self.nPsf):
-            idValid = np.where(self.valid[i,:])[0]
+            idValid = np.where((self.validR[i,:]) & (self.validB[i,:]))[0]
             rmag = self.rmag[i,idValid]
             bmag = self.bmag[i,idValid]
             bMinusr = bmag - rmag
@@ -129,6 +148,11 @@ class LcScoreBoard(object):
             self.wsCoeffB[i,:] = np.polyfit(bMinusr, bmag, 1)
  
     def filter2pt5Sigma(self):
+        """
+        Iterate over all times. For each time, calculate weighted stdev for each valid red and blue points.
+        Mark points that exceed 2.5 sigma as invalid
+        """
+        
         pass
     def filterDDB(self):
         pass

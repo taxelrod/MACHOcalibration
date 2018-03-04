@@ -44,7 +44,13 @@ class LcScoreBoard(object):
             self.time = time.flatten() # remove extraneous dimension from time
             self.rmag = np.zeros((ntPoints), dtype=float)
             self.rmag = rmag
-            # etc
+            self.rerr = np.zeros((ntPoints), dtype=float)
+            self.rerr = rerr
+            self.bmag = np.zeros((ntPoints), dtype=float)
+            self.bmag = bmag
+            self.berr = np.zeros((ntPoints), dtype=float)
+            self.berr = rerr
+
             self.nPsf = 1
         else:
             #
@@ -53,13 +59,17 @@ class LcScoreBoard(object):
             if self.nPsf==1:
                 self.valid = np.stack((self.valid, np.zeros((self.nTime), dtype=bool)))
                 self.rmag = np.stack((self.rmag, np.zeros((self.nTime), dtype=float)))
+                self.rerr = np.stack((self.rerr, np.zeros((self.nTime), dtype=float)))
+                self.bmag = np.stack((self.bmag, np.zeros((self.nTime), dtype=float)))
+                self.berr = np.stack((self.berr, np.zeros((self.nTime), dtype=float)))
             else:
                 self.valid = np.vstack((self.valid, np.zeros((self.nTime), dtype=bool)))
                 self.rmag = np.vstack((self.rmag, np.zeros((self.nTime), dtype=float)))
-                                   
+                self.rerr = np.vstack((self.rerr, np.zeros((self.nTime), dtype=float)))
+                self.bmag = np.vstack((self.bmag, np.zeros((self.nTime), dtype=float)))
+                self.berr = np.vstack((self.berr, np.zeros((self.nTime), dtype=float)))
+                                  
             self.nPsf += 1
-            
-            # etc
             
             # add any new times to the end of the scoreboard's time array
             for (it, t) in enumerate(time):
@@ -70,17 +80,24 @@ class LcScoreBoard(object):
                     self.time[self.nTime] = t
                     self.valid = np.hstack((self.valid, np.zeros((self.nPsf,1), dtype=bool)))
                     self.rmag = np.hstack((self.rmag, np.zeros((self.nPsf,1), dtype=float)))
-                    # etc
+                    self.rerr = np.hstack((self.rerr, np.zeros((self.nPsf,1), dtype=float)))
+                    self.bmag = np.hstack((self.bmag, np.zeros((self.nPsf,1), dtype=float)))
+                    self.berr = np.hstack((self.berr, np.zeros((self.nPsf,1), dtype=float)))
+                    
                     self.valid[self.nPsf-1, self.nTime] = True
                     self.rmag[self.nPsf-1, self.nTime] = rmag[it]
-                    print >>self.log, 'rmag1 %d %d %f' % (self.nPsf-1, self.nTime, rmag[it])
+                    self.rerr[self.nPsf-1, self.nTime] = rerr[it]
+                    self.bmag[self.nPsf-1, self.nTime] = bmag[it]
+                    self.berr[self.nPsf-1, self.nTime] = berr[it]
                     self.nTime += 1
                 else:
                     # proper time column already exists. Stuff rmag, etc into that column for this row
                     self.valid[self.nPsf-1, idTime] = True
                     self.rmag[self.nPsf-1, idTime] = rmag[it]
-                    print >>self.log, 'rmag2 %d %d %f' % (self.nPsf-1, idTime, rmag[it])
-                    # etc
+                    self.rerr[self.nPsf-1, idTime] = rerr[it]
+                    self.bmag[self.nPsf-1, idTime] = bmag[it]
+                    self.berr[self.nPsf-1, idTime] = berr[it]
+ 
 
         self.psfDict[id] = self.nPsf
         self.log.flush()
@@ -91,15 +108,27 @@ class LcScoreBoard(object):
             return None
         else:
             rmag = self.rmag[:,idTime]
+            rerr = self.rerr[:,idTime]
+            bmag = self.bmag[:,idTime]
+            berr = self.berr[:,idTime]
             idValid = np.where(self.valid[:,idTime])[0]
             if len(idValid)==0:
                 return None
             else:
-                return rmag[idValid]
+                return rmag[idValid].flatten(), rerr[idValid].flatten(), bmag[idValid].flatten(), berr[idValid].flatten()
         
     def calcWsCoeffs(self):
-        pass
-    def filter25Sigma(self):
+        self.wsCoeffR = np.zeros((self.nPsf, 2), dtype=float)
+        self.wsCoeffB = np.zeros((self.nPsf, 2), dtype=float)
+        for i in range(self.nPsf):
+            idValid = np.where(self.valid[i,:])[0]
+            rmag = self.rmag[i,idValid]
+            bmag = self.bmag[i,idValid]
+            bMinusr = bmag - rmag
+            self.wsCoeffR[i,:] = np.polyfit(bMinusr, rmag, 1)
+            self.wsCoeffB[i,:] = np.polyfit(bMinusr, bmag, 1)
+ 
+    def filter2pt5Sigma(self):
         pass
     def filterDDB(self):
         pass

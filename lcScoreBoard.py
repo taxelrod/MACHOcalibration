@@ -2,10 +2,12 @@ import numpy as np
 
 class LcScoreBoard(object):
     """Keep track of lightcurve data"""
-    def __init__(self):
+
+    def __init__(self, debug=False):
         # initialize class members
         self.nPsf = 0  # number of cols
         self.nTime = 0 # number of rows
+        self.debug = debug
 #        self.time = # 1D array of times, NOT sorted
 # remaining arrays are all 2D, [nPsf, nTime] reshaped as needed as lightcurves added
 #        self.valid =
@@ -15,7 +17,9 @@ class LcScoreBoard(object):
 #        self.berr =
 #        self.obsid =
         self.psfDict = {} # maps psfId to row in self.XX
-        self.log = open('Logdbg','w')
+
+        if debug:
+            self.log = open('Logdbg','w')
 
     def addLC(self, id, lcData):
 
@@ -110,7 +114,6 @@ class LcScoreBoard(object):
  
 
         self.psfDict[id] = self.nPsf
-        self.log.flush()
 
     def setTemplateObs(self, templateObs):
 
@@ -132,30 +135,15 @@ class LcScoreBoard(object):
     def extractTime(self, t):
         idTime = np.where(t==self.time)[0]
         if len(idTime) == 0:
-            return None, None, None, None
+            return None, None, None, None, None, None
         else:
             rmag = self.rdev[:,idTime]
             rerr = self.rerr[:,idTime]
             bmag = self.bdev[:,idTime]
             berr = self.berr[:,idTime]
-            idValidR = np.where(self.validR[:,idTime])[0]
-            if len(idValidR)==0:
-                rmagT = None
-                rerrT = None
-            else:
-                rmagT = rmag[idValidR].flatten()
-                rerrT = rmag[idValidR].flatten()
-
-            idValidB = np.where(self.validB[:,idTime])[0]
-            if len(idValidB)==0:
-                bmagT = None
-                berrT = None
-            else:
-                bmagT = bmag[idValidB].flatten()
-                berrT = bmag[idValidB].flatten()
-
-            
-            return rmagT, rerrT, bmagT, berrT
+            validR = self.validR[:,idTime]
+            validB = self.validB[:,idTime]
+            return rmag, rerr, bmag, berr, validR, validB
         
     def calcWsCoeffs(self):
         self.wsCoeffR = np.zeros((self.nPsf, 2), dtype=float)
@@ -167,6 +155,23 @@ class LcScoreBoard(object):
             bMinusr = bmag - rmag
             self.wsCoeffR[i,:] = np.polyfit(bMinusr, rmag, 1)
             self.wsCoeffB[i,:] = np.polyfit(bMinusr, bmag, 1)
+
+    def calcWsShift(self):
+
+        self.wsShiftR = np.zeros((self.nTime),dtype=float)
+        self.wsShiftB = np.zeros((self.nTime),dtype=float)
+        
+        for (i, t) in enumerate(self.time):
+            nptsWsShift = 0
+            for n in range(self.nPsf):
+                if self.validR[n,i] and self.validB[n,i]:
+                    self.wsShiftR[i] += np.polyval(self.wsCoeffR[n,:], self.bdev[n, i]-self.rdev[n, i])
+                    self.wsShiftB[i] += np.polyval(self.wsCoeffB[n,:], self.bdev[n, i]-self.rdev[n, i])
+                    nptsWsShift += 1
+            if nptsWsShift > 0:
+                    self.wsShiftR[i] /= nptsWsShift
+                    self.wsShiftB[i] /= nptsWsShift
+            
  
     def filter2pt5Sigma(self):
         """
@@ -174,11 +179,59 @@ class LcScoreBoard(object):
         Mark points that exceed 2.5 sigma as invalid
         """
         for (i, t) in enumerate(self.time):
-            rmag, rerr, bmag, berr = extractTime(t)
-            rwt = 1./(rerr**2 + 0.01**2)
-            rwtvar = np.mean((rdev - rdev.mean())**2*rwt)/np.mean(rwt)
+            rdev, rerr, bdev, berr, validR, validB = self.extractTime(t)
+            ivalidR = np.where(validR)[0]
+            ivalidB = np.where(validB)[0]
+            rdevV = rdev[ivalidR]
+            rerrV = rerr[ivalidR]
+            bdevV = bdev[ivalidB]
+            berrV = berr[ivalidB]
+            
+            rwt = 1./(rerrV**2 + 0.01**2)
+            rwtvar = np.mean((rdevV - rdevV.mean())**2*rwt)/np.mean(rwt)
             rsigcut = 2.5*np.sqrt(rwtvar)
-        
-        pass
+            idRcut = np.where((validR) & (np.abs(rdev)>rsigcut))[0]
+            self.validR[idRcut, i] = False
+
+            bwt = 1./(berrV**2 + 0.01**2)
+            bwtvar = np.mean((bdevV - bdevV.mean())**2*bwt)/np.mean(bwt)
+            bsigcut = 2.5*np.sqrt(bwtvar)
+            idBcut = np.where((validB) & (np.abs(bdev)>bsigcut))[0]
+            self.validB[idBcut, i] = False
+            if self.debug:
+                print >>self.log, t, rsigcut, bsigcut, validR, validB, idRcut, idBcut
+
+        if self.debug:
+            self.log.flush()
+
     def filterDDB(self):
-        pass
+
+        """
+        Iterate over all times. For each time, calculate weighted stdev for each valid red and blue points.
+        Mark points that exceed the DDB quantity 'dfmagdifmn' in magnorm.F as invalid
+        """
+        for (i, t) in enumerate(self.time):
+            rdev, rerr, bdev, berr, validR, validB = self.extractTime(t)
+            ivalidR = np.where(validR)[0]
+            ivalidB = np.where(validB)[0]
+            rdevV = rdev[ivalidR]
+            rerrV = rerr[ivalidR]
+            bdevV = bdev[ivalidB]
+            berrV = berr[ivalidB]
+            
+            rwt = 1./(rerrV**2 + 0.01**2)
+            rwtvar = np.mean((rdevV - rdevV.mean())**2*rwt)/np.mean(rwt)
+            rabsnormcut = np.maximum(np.sqrt(rwtvar)*rerr, 0.05)
+            idRcut = np.where((validR) & (np.abs(rdev)>rabsnormcut))[0]
+            self.validR[idRcut, i] = False
+
+            bwt = 1./(berrV**2 + 0.01**2)
+            bwtvar = np.mean((bdevV - bdevV.mean())**2*bwt)/np.mean(bwt)
+            babsnormcut = np.maximum(np.sqrt(bwtvar)*berr, 0.05)
+            idBcut = np.where((validB) & (np.abs(bdev)>babsnormcut))[0]
+            self.validB[idBcut, i] = False
+            if self.debug:
+                print >>self.log, 'DDB: ',t, rabsnormcut, babsnormcut, validR, validB, idRcut, idBcut
+
+        if self.debug:
+            self.log.flush()

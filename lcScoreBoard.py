@@ -27,12 +27,6 @@ class LcScoreBoard(object):
             raise ValueError, 'light curve with id %d already in LcScoreBoard' % id
 
         # name the columns of the incoming data
-#        time = lcData[:,2]
-#        rmag = lcData[:,3]
-#        rerr = lcData[:,4]
-#        bmag = lcData[:,5]
-#        berr = lcData[:,6]
-#        obsid = lcData[:,7]
 
         time = lcData[:,0]
         rmag = lcData[:,1]
@@ -156,6 +150,7 @@ class LcScoreBoard(object):
             self.wsCoeffR[i,:] = np.polyfit(bMinusr, rmag, 1)
             self.wsCoeffB[i,:] = np.polyfit(bMinusr, bmag, 1)
 
+
     def calcWsShift(self):
 
         self.wsShiftR = np.zeros((self.nTime),dtype=float)
@@ -163,14 +158,19 @@ class LcScoreBoard(object):
         
         for (i, t) in enumerate(self.time):
             nptsWsShift = 0
+            wtSumR = wtSumB = 0
             for n in range(self.nPsf):
                 if self.validR[n,i] and self.validB[n,i]:
-                    self.wsShiftR[i] += np.polyval(self.wsCoeffR[n,:], self.bdev[n, i]-self.rdev[n, i])
-                    self.wsShiftB[i] += np.polyval(self.wsCoeffB[n,:], self.bdev[n, i]-self.rdev[n, i])
+                    wtR = 1./(self.rerr[n,i]**2 + 0.01**2)
+                    wtB = 1./(self.berr[n,i]**2 + 0.01**2)
+                    self.wsShiftR[i] += np.polyval(self.wsCoeffR[n,:], self.bdev[n, i]-self.rdev[n, i]) * wtR
+                    self.wsShiftB[i] += np.polyval(self.wsCoeffB[n,:], self.bdev[n, i]-self.rdev[n, i]) * wtB
+                    wtSumR += wtR
+                    wtSumB += wtB
                     nptsWsShift += 1
             if nptsWsShift > 0:
-                    self.wsShiftR[i] /= nptsWsShift
-                    self.wsShiftB[i] /= nptsWsShift
+                    self.wsShiftR[i] /= wtSumR
+                    self.wsShiftB[i] /= wtSumB
             
  
     def filter2pt5Sigma(self):

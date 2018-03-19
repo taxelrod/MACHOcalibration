@@ -163,16 +163,20 @@ def diddlerLC(a):
     return diddler
 
     
-def makeCorrectedLC(goodT, u, s, v, nKeep):
-    global nLc, lcsb
+def makeCorrectedLC(goodLc, goodT, u, s, v, nKeep):
+    global lcsb
 
     lcApprox = makeApproxLC(u, s, v, nKeep)
 
     lcCorrected = np.zeros_like(lcApprox)
+    lcUnCorrected = np.zeros_like(lcApprox)
 
-    for n in range(nLc):
-        lcCorrected[n,:] = lcsb.rmag[n,goodT] - np.median(lcsb.rmag[n,goodT]) - lcApprox[n,:]
+    nApprLc = lcApprox.shape[0]
 
-    return lcCorrected
+    for n in range(nApprLc):
+        lcUnCorrected[n,:] = lcsb.rmag[goodLc[n],goodT] - np.median(lcsb.rmag[goodLc[n],goodT])
+        lcCorrected[n,:] = lcUnCorrected[n,:] - lcApprox[n,:]
+
+    return lcCorrected, lcUnCorrected
 
     

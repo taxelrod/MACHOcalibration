@@ -104,14 +104,15 @@ def importLC(lcFileName):
 Problem:  For large sets of lightcurves, there may be NO time for which all lightcurves are valid.  
 Possibly just consider lightcurves with number of valid points > frac of max
 """
-def svdLC(minValidFrac=0):
+def svdLC(minValidFrac=0, threshRmag=0):
     global nLc, lcsb
   
     t = lcsb.time
     goodT = list()
 
     validRpts = np.sum(lcsb.validR,axis=1)
-    goodLc = np.where(validRpts >= minValidFrac*len(t))[0]
+    avgRmag = np.mean(lcsb.rmag,axis=1)
+    goodLc = np.where((validRpts >= minValidFrac*len(t)) & (avgRmag < threshRmag))[0]
     nGoodLc = len(goodLc)
 
     print 'svdLC: number of included lightcurves = %d' % nGoodLc

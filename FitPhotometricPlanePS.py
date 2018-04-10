@@ -18,7 +18,7 @@ def FitPhotometricPlane(dataFileName, outputFileName, sigmaClip=5.0, nIterMax=3)
     Vmed = data[:,5]
     gmag = data[:,8]
     rmag = data[:,10]
-    imag = data[:,10]
+    imag = data[:,12]
     unity = np.ones_like(Rmed)
     A = np.stack((Rmed, Vmed, unity), axis=1)
 

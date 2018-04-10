@@ -8,6 +8,7 @@ median mag and stdev mag.
 """
 
 import numpy as np
+from scipy.stats import pearsonr
 import string
 import sys
 
@@ -36,9 +37,9 @@ def lcStats(F_fileName, Fstat_fileName, filter=True):
             rmag = float(photFields[9])
             rerr = float(photFields[10])
             bmag = float(photFields[24])
-            rerr = float(photFields[10])
+            berr = float(photFields[25])
             if filter:
-                if rmag <= -15 or bmag <= -15 or rmag > -2 or bmag > -2:
+                if rmag <= -15 or bmag <= -15 or rmag > -2 or bmag > -2 or rerr < 0 or berr < 0:
                     continue
             if field != activeField or tile != activeTile:
                 if activeField == 0:
@@ -51,24 +52,33 @@ def lcStats(F_fileName, Fstat_fileName, filter=True):
                 lc = lcDict[seq]
                 lc[0].append(rmag)
                 lc[1].append(bmag)
+                lc[2].append(rerr)
+                lc[3].append(berr)
                 lcDict[seq] = lc
             else:
-                lcDict[seq] = [[rmag], [bmag]]
+                lcDict[seq] = [[rmag], [bmag], [rerr], [berr]]
 
     if debug:
         print lcDict
 
-    fStat.write('# F T S Rmed Rsigma Vmed Vsigma\n')
+    fStat.write('# F T S Rmed Rsigma RmeanErr Vmed Vsigma VmeanErr WScoeff WScoeffp\n')
     
     for seq in lcDict.keys():
         lc = lcDict[seq]
-        lcr = lc[0]
-        lcb = lc[1]
+        lcr = np.array(lc[0])
+        lcb = np.array(lc[1])
+        lcrerr = lc[2]
+        lcberr = lc[3]
         lcrMedian = np.median(lcr)
         lcrStdev = np.std(lcr)
+        lcrAverr = np.median(lcrerr)
         lcbMedian = np.median(lcb)
         lcbStdev = np.std(lcb)
-        outputLine = '%d %d %d %.3f %.3f %.3f %.3f\n' % (field, tile, seq, lcrMedian, lcrStdev, lcbMedian, lcbStdev)
+        lcbAverr = np.median(lcberr)
+
+        bMinusR = lcb - lcr
+        wsCoeff, wsCoeffp = pearsonr(lcb-lcbMedian, lcr-lcrMedian)
+        outputLine = '%d %d %d %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f\n' % (field, tile, seq, lcrMedian, lcrStdev, lcrAverr, lcbMedian, lcbStdev, lcbAverr, wsCoeff, wsCoeffp)
         fStat.write(outputLine)
 
     fStat.close()

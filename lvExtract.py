@@ -35,9 +35,10 @@ if __name__ == "__main__":
     varThresh = 1.2
     errThresh = 0.1
 
-    if sys.argc>2:
+    argc = len(sys.argv)
+    if argc>2:
         varThresh = float(sys.argv[2])
-    if sys.argc>3:
+    if argc>3:
         errThresh = float(sys.argv[3])
 
     lvExtract(lcsFileName, varThresh, errThresh)

@@ -108,7 +108,7 @@ def lcStats(F_fileName, Fstat_fileName, S_fileName=None, filter=True):
             outputLine = '%d %d %d %d %.5f %.5f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f\n' % (field, tile, seq, redChunk, raDeg, decDeg, lcrMedian, lcrStdev, lcrAverr, lcbMedian, lcbStdev, lcbAverr, wsCoeff, wsCoeffp)
         else:
             outputLine = '%d %d %d %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f\n' % (field, tile, seq, lcrMedian, lcrStdev, lcrAverr, lcbMedian, lcbStdev, lcbAverr, wsCoeff, wsCoeffp)
-
+        
         fStat.write(outputLine)
 
     fStat.close()

@@ -10,6 +10,6 @@ set field=$1
 
 set OUTSTAT=${STAT}/F_$field
 
-foreach f (${OUTSTAT}/F_$field_C*.chunkstat)
+foreach f (${OUTSTAT}/F_${field}_C*.chunkstat)
 	stilts tskymatch2 ifmt1=ascii omode=out ofmt=ascii error=1.5 out=${OUT}/$f:t:r.xmatch $f /p/lscratchh/axelrod2/SMASH_LMC/LMCbody_stars_unique_$field.fits
 end

@@ -1,9 +1,14 @@
+#!/bin/csh
 setenv MPHOT /p/lscratchh/dawson29/macho_photometry
 setenv MSTAR /p/lscratchh/axelrod2/MSTAR
 setenv TMP /p/lscratchh/axelrod2/tmp
-setenv OUT /p/lscratchh/axelrod2/lcStat
+setenv STAT /p/lscratchh/axelrod2/lcStat
+
+set field=$1
+
+set OUTSTAT=${STAT}/F_$field
 
 foreach c (`cat chunklist`)
-	echo '# F T S Rchunk RA DEC Rmed Rmad RmeanErr Vmed Vmad VmeanErr WScoeff WScoeffp' > ${OUT}/F_77_C$c.chunkstat
-	cat ${OUT}/F_77*.lvstat | awk '$4=='"$c" >> ${OUT}/F_77_C$c.chunkstat
+	echo '# F T S Rchunk RA DEC Rmed Rmad RmeanErr Vmed Vmad VmeanErr WScoeff WScoeffp' > ${OUTSTAT}/F_$field_C$c.chunkstat
+	cat ${OUTSTAT}/F_$field*.lvstat | awk '$4=='"$c" >> ${OUTSTAT}/F_$field_C$c.chunkstat
 end

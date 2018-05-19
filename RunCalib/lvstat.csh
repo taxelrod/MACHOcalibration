@@ -5,5 +5,5 @@ setenv OUT /p/lscratchh/axelrod2/lcStat
 
 foreach f (${OUT}/F_77*.lcstat)
 	echo $f
-	./lvExtract.py $f 1.2 > $f:r.lvstat
+	./lvExtract.py $f 1.2 0.1 > $f:r.lvstat
 end

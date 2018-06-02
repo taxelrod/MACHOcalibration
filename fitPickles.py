@@ -49,9 +49,11 @@ def dist3D(x0, x1, x2):
     # minimum distance from x1 to the line formed by x1 and x2.  All coords are 3D.
     # see http://mathworld.wolfram.com/Point-LineDistance3-Dimensional.html
 
+    vec = np.cross(np.cross(x2 - x1, x1 - x0), x1-x2)
+    uvec = vec/np.linalg.norm(vec)
     dist = np.linalg.norm(np.cross(x2 - x1, x1 - x0))/np.linalg.norm(x2-x1)
 
-    return dist
+    return dist, dist*uvec
 
 def addDist3D(pts, matchFileName, outFileName, unMatchedFmt=False):
     x1 = pts[0]
@@ -78,16 +80,21 @@ def addDist3D(pts, matchFileName, outFileName, unMatchedFmt=False):
     iz = i - z
 
     nfMatchDat = matchDat.shape[1]
-    
+    meanShift = np.zeros((3))
     for (i, x) in enumerate(gr):
         y = ri[i]
         z = iz[i]
-        dist = dist3D([x,y,z], x1, x2)
+        dist, shiftVec = dist3D([x,y,z], x1, x2)
+        meanShift += shiftVec
         for n in range(nfMatchDat):
             print(matchDat[i,n], end=' ', file=outFile) 
         print(gr[i], ri[i], iz[i], dist, file=outFile)
 
+    meanShift /= float(len(gr))
+    
     outFile.close()
+
+    return meanShift
 
 
 if __name__ == "__main__":
@@ -99,10 +106,11 @@ if __name__ == "__main__":
     vv, pts = fitPickles(picklesFileName)
 
     if len(sys.argv)==4:
-        addDist3D(pts, matchFileName, outFileName)
+        meanShift = addDist3D(pts, matchFileName, outFileName)
     else:
-        addDist3D(pts, matchFileName, outFileName, unMatchedFmt=True)
+        meanShift = addDist3D(pts, matchFileName, outFileName, unMatchedFmt=True)
     
 
     print(vv)
     print(pts)
+    print(meanShift)

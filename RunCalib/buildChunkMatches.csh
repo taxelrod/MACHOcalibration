@@ -15,7 +15,7 @@ if (! -d $OUTMATCH) then
     mkdir $OUTMATCH
 endif
 
-set OUTMATCHALL=$OUTMATCH/$f:t:r.all.xmatch
+set OUTMATCHALL=$OUTMATCH/F_$field.all.xmatch
 if (-e $OUTMATCHALL) then
     rm -f $OUTMATCHALL
 endif

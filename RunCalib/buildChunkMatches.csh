@@ -17,7 +17,7 @@ endif
 
 set OUTMATCHALL=$OUTMATCH/$f:t:r.all.xmatch
 if (-e $OUTMATCHALL) then
-    rm -f
+    rm -f $OUTMATCHALL
 endif
 
 foreach f (${OUTSTAT}/F_${field}_C*.chunkstat)

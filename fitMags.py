@@ -5,20 +5,26 @@ import numpy as np
 import statsmodels.api as sm
 import scipy.odr as odr
 
-useODR = False
+useODR = True
 
-def fODR(B, x):
-    return B[0]*x[0,:] + B[1]*x[1,:] + B[2]
+lenY = 3
+lenX = 2
 
-def fitODR(y, yerr, x1, x1err, x2, x2err):
-    x = np.vstack((x1, x2))
-    sx = np.vstack((x1err, x2err))
-    sy = yerr
-    odrData = odr.RealData(x, y, sx=sx, sy=sy)
+def reshapeBeta(beta):
+    A = np.reshape(beta[0:-lenY], (lenY, lenX))
+    B = np.reshape(beta[lenX*lenY:], (lenY,1))
+    return A, B
+
+def fODR(Beta, x):
+    A, B = reshapeBeta(Beta)
+    return np.matmul(A, x) + B
+
+def fitODR(y, yerr, x, xerr):
+    odrData = odr.RealData(x, y, sx=xerr, sy=yerr)
     odrLin = odr.Model(fODR)
-    odrModel = odr.ODR(odrData, odrLin, beta0=[0,0,0])
+    odrModel = odr.ODR(odrData, odrLin, beta0=np.zeros((lenY*lenX + lenY)))
     res=odrModel.run()
-    return res.beta, res.sd_beta
+    return res.beta, res.sd_beta, res.cov_beta, res.res_var
 
 def fitPlane(z, zerr, x, y):
     # form x, y, and vector of ones into a matrix
@@ -59,12 +65,19 @@ def fitMags(outmag, magerr, mag, color):
     print(res_wls.summary())
     print 'MSE_resid:', res_wls.mse_resid
 
+def printFlattened(arr, file):
+    flatArr = arr.flatten()
+    nElem = len(flatArr)
+    for n in range(nElem):
+        print >>file, flatArr[n],
+    print >>file, ''
+    
 if __name__ == "__main__":
 
     matchFileName = sys.argv[1]
     outFileName = sys.argv[2]
 
-    fOut = open(outFileName, 'a')
+    fOut = open(outFileName, 'w')
     
     matchData = np.loadtxt(matchFileName)
     DECam_g = matchData[:,17]
@@ -79,16 +92,21 @@ if __name__ == "__main__":
     MACHO_Verr = matchData[:,11]
 
     if useODR:
-        (beta_g, sd_beta_g) = fitODR(DECam_g, DECam_gerr, MACHO_R, MACHO_Rerr, MACHO_V, MACHO_Verr)
-        (beta_r, sd_beta_r) = fitODR(DECam_r, DECam_rerr, MACHO_R, MACHO_Rerr, MACHO_V, MACHO_Verr)
-        (beta_i, sd_beta_i) = fitODR(DECam_i, DECam_ierr, MACHO_R, MACHO_Rerr, MACHO_V, MACHO_Verr)
-
+        (beta, sd_beta, cov_beta, res_var) = fitODR(np.vstack((DECam_g, DECam_r, DECam_i)), np.vstack((DECam_gerr, DECam_rerr, DECam_ierr)), np.vstack((MACHO_R, MACHO_V)), np.vstack((MACHO_Rerr, MACHO_Verr)))
+        print >>fOut, matchFileName
+        A, B = reshapeBeta(beta)
+        printFlattened(A, fOut)
+        printFlattened(B, fOut)
+        A, B = reshapeBeta(sd_beta)
+        printFlattened(A, fOut)
+        printFlattened(B, fOut)
+        printFlattened(cov_beta, fOut)
+        print >>fOut, np.sqrt(res_var/(3.*len(DECam_g)))
     else:
         (beta_g, sd_beta_g, resid_g) = fitPlane(DECam_g, DECam_gerr, MACHO_R, MACHO_V)
         (beta_r, sd_beta_r, resid_r) = fitPlane(DECam_r, DECam_rerr, MACHO_R, MACHO_V)
         (beta_i, sd_beta_i, resid_i) = fitPlane(DECam_i, DECam_ierr, MACHO_R, MACHO_V)
-
-    print >>fOut, matchFileName, beta_g, sd_beta_g, beta_r, sd_beta_r, beta_i, sd_beta_i
+        print >>fOut, matchFileName, beta_g, sd_beta_g, beta_r, sd_beta_r, beta_i, sd_beta_i
 #    print >>fOut, resid_g
 #    print >>fOut, resid_r
 #    print >>fOut, resid_i

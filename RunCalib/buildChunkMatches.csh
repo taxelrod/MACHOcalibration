@@ -16,7 +16,7 @@ if (! -d $OUTMATCH) then
 endif
 
 set OUTMATCHALL=$OUTMATCH/F_$field.all.xmatch
-set OUTMACHALLTMP=$OUTMATCHALL.tmp
+set OUTMATCHALLTMP=$OUTMATCHALL.tmp
 rm -f $OUTMATCHALL
 rm -f $OUTMATCHALLTMP
 

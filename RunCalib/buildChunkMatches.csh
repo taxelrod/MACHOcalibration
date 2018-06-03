@@ -16,13 +16,15 @@ if (! -d $OUTMATCH) then
 endif
 
 set OUTMATCHALL=$OUTMATCH/F_$field.all.xmatch
-if (-e $OUTMATCHALL) then
-    rm -f $OUTMATCHALL
-endif
+set OUTMACHALLTMP=$OUTMATCHALL.tmp
+rm -f $OUTMATCHALL
+rm -f $OUTMATCHALLTMP
 
-touch $OUTMATCHALL
+touch $OUTMATCHALLTMP
 
 foreach f (${OUTSTAT}/F_${field}_C*.chunkstat)
 	stilts tskymatch2 ifmt1=ascii omode=out ofmt=ascii error=1.5 out=${OUTMATCH}/$f:t:r.xmatch $f /p/lscratchh/axelrod2/SMASH_LMC/LMCbody_stars_unique_$field.fits
-	cat ${OUTMATCH}/$f:t:r.xmatch >> $OUTMATCHALL
+	cat ${OUTMATCH}/$f:t:r.xmatch >> $OUTMATCHALLTMP
 end
+
+sed 's/""/0.0/' $OUTMATCHALLTMP > $OUTMATCHALL

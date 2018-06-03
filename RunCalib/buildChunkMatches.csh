@@ -20,6 +20,8 @@ if (-e $OUTMATCHALL) then
     rm -f $OUTMATCHALL
 endif
 
+touch $OUTMATCHALL
+
 foreach f (${OUTSTAT}/F_${field}_C*.chunkstat)
 	stilts tskymatch2 ifmt1=ascii omode=out ofmt=ascii error=1.5 out=${OUTMATCH}/$f:t:r.xmatch $f /p/lscratchh/axelrod2/SMASH_LMC/LMCbody_stars_unique_$field.fits
 	cat ${OUTMATCH}/$f:t:r.xmatch >> $OUTMATCHALL

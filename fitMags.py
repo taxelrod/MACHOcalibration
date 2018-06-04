@@ -6,8 +6,12 @@ import statsmodels.api as sm
 import scipy.odr as odr
 
 useODR = True
+threeD = False
 
-lenY = 3
+if threeD:
+    lenY = 3
+else:
+    lenY = 2
 lenX = 2
 
 def reshapeBeta(beta):
@@ -92,7 +96,11 @@ if __name__ == "__main__":
     MACHO_Verr = matchData[:,11]
 
     if useODR:
-        (beta, sd_beta, cov_beta, res_var) = fitODR(np.vstack((DECam_g, DECam_r, DECam_i)), np.vstack((DECam_gerr, DECam_rerr, DECam_ierr)), np.vstack((MACHO_R, MACHO_V)), np.vstack((MACHO_Rerr, MACHO_Verr)))
+        if threeD:
+            (beta, sd_beta, cov_beta, res_var) = fitODR(np.vstack((DECam_g, DECam_r, DECam_i)), np.vstack((DECam_gerr, DECam_rerr, DECam_ierr)), np.vstack((MACHO_R, MACHO_V)), np.vstack((MACHO_Rerr, MACHO_Verr)))
+        else:
+            (beta, sd_beta, cov_beta, res_var) = fitODR(np.vstack((DECam_g, DECam_r)), np.vstack((DECam_gerr, DECam_rerr)), np.vstack((MACHO_R, MACHO_V)), np.vstack((MACHO_Rerr, MACHO_Verr)))
+            
         print >>fOut, matchFileName
         A, B = reshapeBeta(beta)
         printFlattened(A, fOut)

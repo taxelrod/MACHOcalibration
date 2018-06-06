@@ -7,6 +7,7 @@ import scipy.odr as odr
 
 useODR = True
 threeD = False
+grMax = 1.4
 
 if threeD:
     lenY = 3
@@ -26,8 +27,9 @@ def fODR(Beta, x):
 def fitODR(y, yerr, x, xerr):
     odrData = odr.RealData(x, y, sx=xerr, sy=yerr)
     odrLin = odr.Model(fODR)
-    odrModel = odr.ODR(odrData, odrLin, beta0=np.zeros((lenY*lenX + lenY)))
+    odrModel = odr.ODR(odrData, odrLin, beta0=np.zeros((lenY*lenX + lenY)), maxit=1000)
     res=odrModel.run()
+    res.pprint()
     return res.beta, res.sd_beta, res.cov_beta, res.res_var
 
 def fitPlane(z, zerr, x, y):
@@ -80,20 +82,44 @@ if __name__ == "__main__":
 
     matchFileName = sys.argv[1]
     outFileName = sys.argv[2]
+    if len(sys.argv) > 3:
+        matchFmt = False
+    else:
+        matchFmt = True
 
-    fOut = open(outFileName, 'w')
+    fOut = open(outFileName, 'a')
+    sys.stdout = fOut
     
+    print >>fOut, matchFileName
     matchData = np.loadtxt(matchFileName)
-    DECam_g = matchData[:,17]
-    DECam_gerr = matchData[:,22]
-    DECam_r = matchData[:,18]
-    DECam_rerr = matchData[:,23]
-    DECam_i = matchData[:,19]
-    DECam_ierr = matchData[:,24]
-    MACHO_R = matchData[:,6]
-    MACHO_V = matchData[:,9]
-    MACHO_Rerr = matchData[:,8]
-    MACHO_Verr = matchData[:,11]
+    if matchFmt:
+        DECam_g = matchData[:,17]
+        DECam_gerr = matchData[:,22]
+        DECam_r = matchData[:,18]
+        DECam_rerr = matchData[:,23]
+        DECam_i = matchData[:,19]
+        DECam_ierr = matchData[:,24]
+        MACHO_R = matchData[:,6]
+        MACHO_V = matchData[:,9]
+        MACHO_Rerr = matchData[:,8]
+        MACHO_Verr = matchData[:,11]
+    else:
+        DECam_g = matchData[:,2]
+        DECam_r = matchData[:,3]
+        DECam_i = matchData[:,4]
+        DECam_gr = matchData[:,6]
+        MACHO_R = matchData[:,1]
+        MACHO_V = matchData[:,0]
+        meas_err = matchData[:,5]
+
+        filt_gr = np.where(DECam_gr < grMax)
+        DECam_g = DECam_g[filt_gr]
+        DECam_r = DECam_r[filt_gr]
+        DECam_i = DECam_i[filt_gr]
+        MACHO_V = MACHO_V[filt_gr]
+        MACHO_R = MACHO_R[filt_gr]
+        meas_err = meas_err[filt_gr]
+        MACHO_Rerr = MACHO_Verr = DECam_gerr = DECam_rerr = DECam_ierr = meas_err        
 
     if useODR:
         if threeD:
@@ -101,14 +127,13 @@ if __name__ == "__main__":
         else:
             (beta, sd_beta, cov_beta, res_var) = fitODR(np.vstack((DECam_g, DECam_r)), np.vstack((DECam_gerr, DECam_rerr)), np.vstack((MACHO_R, MACHO_V)), np.vstack((MACHO_Rerr, MACHO_Verr)))
             
-        print >>fOut, matchFileName
-        A, B = reshapeBeta(beta)
-        printFlattened(A, fOut)
-        printFlattened(B, fOut)
-        A, B = reshapeBeta(sd_beta)
-        printFlattened(A, fOut)
-        printFlattened(B, fOut)
-        printFlattened(cov_beta, fOut)
+#        A, B = reshapeBeta(beta)
+#        printFlattened(A, fOut)
+#        printFlattened(B, fOut)
+#        A, B = reshapeBeta(sd_beta)
+#        printFlattened(A, fOut)
+#        printFlattened(B, fOut)
+#        printFlattened(cov_beta, fOut)
         print >>fOut, np.sqrt(res_var/(3.*len(DECam_g)))
     else:
         (beta_g, sd_beta_g, resid_g) = fitPlane(DECam_g, DECam_gerr, MACHO_R, MACHO_V)

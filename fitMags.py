@@ -7,6 +7,7 @@ import scipy.odr as odr
 
 useODR = True
 threeD = False
+matchFmt = True
 grMax = 1.4
 
 if threeD:
@@ -82,10 +83,7 @@ if __name__ == "__main__":
 
     matchFileName = sys.argv[1]
     outFileName = sys.argv[2]
-    if len(sys.argv) > 3:
-        matchFmt = False
-    else:
-        matchFmt = True
+    outSynthFileName = sys.argv[3]
 
     fOut = open(outFileName, 'a')
     sys.stdout = fOut
@@ -126,6 +124,24 @@ if __name__ == "__main__":
             (beta, sd_beta, cov_beta, res_var) = fitODR(np.vstack((DECam_g, DECam_r, DECam_i)), np.vstack((DECam_gerr, DECam_rerr, DECam_ierr)), np.vstack((MACHO_R, MACHO_V)), np.vstack((MACHO_Rerr, MACHO_Verr)))
         else:
             (beta, sd_beta, cov_beta, res_var) = fitODR(np.vstack((DECam_g, DECam_r)), np.vstack((DECam_gerr, DECam_rerr)), np.vstack((MACHO_R, MACHO_V)), np.vstack((MACHO_Rerr, MACHO_Verr)))
+            synth_gr = fODR(beta, np.vstack((MACHO_R, MACHO_V)))
+            synth_g = synth_gr[0,:]
+            synth_r = synth_gr[1,:]
+
+            nPts = len(synth_g)
+            outData = np.zeros((nPts, 10))
+            outData[:,0] = DECam_g
+            outData[:,1] = DECam_gerr
+            outData[:,2] = DECam_r
+            outData[:,3] = DECam_rerr
+            outData[:,4] = MACHO_R
+            outData[:,5] = MACHO_Rerr
+            outData[:,6] = MACHO_V
+            outData[:,7] = MACHO_Verr
+            outData[:,8] = synth_g.transpose()
+            outData[:,9] = synth_r.transpose()
+            np.savetxt(outSynthFileName, outData, header='DECam_g DECam_gerr DECam_r DECam_rerr MACHO_R MACHO_Rerr MACHO_B MACHO_Berr synth_g synth_r')
+            
             
 #        A, B = reshapeBeta(beta)
 #        printFlattened(A, fOut)

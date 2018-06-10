@@ -5,10 +5,12 @@ import numpy as np
 import statsmodels.api as sm
 import scipy.odr as odr
 
-useODR = True
 threeD = False
 matchFmt = True
 grMax = 1.4
+nIter = 5
+nSigma = 3
+
 
 if threeD:
     lenY = 3
@@ -16,8 +18,35 @@ else:
     lenY = 2
 lenX = 2
 
+def dist3D(x0, x1, x2):
+    # minimum distance from x0 to the line formed by x1 and x2.  All coords are 2D or 3D.
+    # see http://mathworld.wolfram.com/Point-LineDistance3-Dimensional.html
+
+    vec = np.cross(np.cross(x2 - x1, x1 - x0), x1-x2)
+    uvec = vec/np.linalg.norm(vec)
+    dist = np.linalg.norm(np.cross(x2 - x1, x1 - x0))/np.linalg.norm(x2-x1)
+
+    return dist, dist*uvec
+
+def filterOnDist(DECam_g, synth_g, nSigma):
+    x1 = np.array([10.0, 10.0, 0])
+    x2 = np.array([30.0, 30.0, 0])
+
+    dist = np.zeros_like(DECam_g)
+
+    for (i, dg) in enumerate(DECam_g):
+        sg = synth_g[i]
+        x0 = np.array([dg, sg, 0])
+        d, dvec = dist3D(x0, x1, x2)
+        dist[i] = d
+
+    sigma = np.std(dist)
+    goodId = np.where(dist<nSigma*sigma)
+    return goodId
+                         
+        
 def reshapeBeta(beta):
-    A = np.reshape(beta[0:-lenY], (lenY, lenX))
+    A = np.reshape(beta[0:-lenY], (lenY,lenX))
     B = np.reshape(beta[lenX*lenY:], (lenY,1))
     return A, B
 
@@ -33,44 +62,6 @@ def fitODR(y, yerr, x, xerr):
     res.pprint()
     return res.beta, res.sd_beta, res.cov_beta, res.res_var
 
-def fitPlane(z, zerr, x, y):
-    # form x, y, and vector of ones into a matrix
-    nPts = len(z)
-    if len(x) != nPts or len(y) != nPts:
-        sys.exit('fitPlane input vectors must all have same length')
-    a = np.column_stack((x, y))
-    a = sm.add_constant(a)
-
-    mod_wls = sm.WLS(z, a, weights=1./zerr)
-    res_wls = mod_wls.fit()
-    return res_wls.params, res_wls.bse, res_wls.resid
-#    print(res_wls.summary())
-
-def fitQuad(z, zerr, x, y):
-    # form x, y, and vector of ones into a matrix
-    nPts = len(z)
-    if len(x) != nPts or len(y) != nPts:
-        sys.exit('fitPlane input vectors must all have same length')
-    a = np.column_stack((x, y, x*x, y*y))
-    a = sm.add_constant(a)
-
-    mod_wls = sm.WLS(z, a, weights=1./zerr)
-    res_wls = mod_wls.fit()
-    print(res_wls.summary())
-
-
-def fitMags(outmag, magerr, mag, color):
-    # form x, y, and vector of ones into a matrix
-    nPts = len(outmag)
-    if len(mag) != nPts or len(color) != nPts:
-        sys.exit('fitPlane input vectors must all have same length')
-    a = np.column_stack((mag, color, color*color, color*color*color))
-    a = sm.add_constant(a)
-
-    mod_wls = sm.WLS(outmag, a, weights=1./magerr)
-    res_wls = mod_wls.fit()
-    print(res_wls.summary())
-    print 'MSE_resid:', res_wls.mse_resid
 
 def printFlattened(arr, file):
     flatArr = arr.flatten()
@@ -119,30 +110,37 @@ if __name__ == "__main__":
         meas_err = meas_err[filt_gr]
         MACHO_Rerr = MACHO_Verr = DECam_gerr = DECam_rerr = DECam_ierr = meas_err        
 
-    if useODR:
+    goodId = range(len(DECam_g))   #  all good to begin
+    print >>fOut, -1, len(DECam_g)
+    
+    for n in range(nIter):
         if threeD:
             (beta, sd_beta, cov_beta, res_var) = fitODR(np.vstack((DECam_g, DECam_r, DECam_i)), np.vstack((DECam_gerr, DECam_rerr, DECam_ierr)), np.vstack((MACHO_R, MACHO_V)), np.vstack((MACHO_Rerr, MACHO_Verr)))
         else:
-            (beta, sd_beta, cov_beta, res_var) = fitODR(np.vstack((DECam_g, DECam_r)), np.vstack((DECam_gerr, DECam_rerr)), np.vstack((MACHO_R, MACHO_V)), np.vstack((MACHO_Rerr, MACHO_Verr)))
+            (beta, sd_beta, cov_beta, res_var) = fitODR(np.vstack((DECam_g[goodId], DECam_r[goodId])), np.vstack((DECam_gerr[goodId], DECam_rerr[goodId])), np.vstack((MACHO_R[goodId], MACHO_V[goodId])), np.vstack((MACHO_Rerr[goodId], MACHO_Verr[goodId])))
             synth_gr = fODR(beta, np.vstack((MACHO_R, MACHO_V)))
             synth_g = synth_gr[0,:]
             synth_r = synth_gr[1,:]
+            goodId = filterOnDist(DECam_g, synth_g, nSigma)
+            print >>fOut, n, len(goodId[0])
+                   
 
-            nPts = len(synth_g)
-            outData = np.zeros((nPts, 10))
-            outData[:,0] = DECam_g
-            outData[:,1] = DECam_gerr
-            outData[:,2] = DECam_r
-            outData[:,3] = DECam_rerr
-            outData[:,4] = MACHO_R
-            outData[:,5] = MACHO_Rerr
-            outData[:,6] = MACHO_V
-            outData[:,7] = MACHO_Verr
-            outData[:,8] = synth_g.transpose()
-            outData[:,9] = synth_r.transpose()
-            np.savetxt(outSynthFileName, outData, header='DECam_g DECam_gerr DECam_r DECam_rerr MACHO_R MACHO_Rerr MACHO_B MACHO_Berr synth_g synth_r')
-            
-            
+    nPts = len(synth_g)
+    outData = np.zeros((nPts, 10))
+    outData[:,0] = DECam_g
+    outData[:,1] = DECam_gerr
+    outData[:,2] = DECam_r
+    outData[:,3] = DECam_rerr
+    outData[:,4] = MACHO_R
+    outData[:,5] = MACHO_Rerr
+    outData[:,6] = MACHO_V
+    outData[:,7] = MACHO_Verr
+    outData[:,8] = synth_g.transpose()
+    outData[:,9] = synth_r.transpose()
+    np.savetxt(outSynthFileName, outData, header='DECam_g DECam_gerr DECam_r DECam_rerr MACHO_R MACHO_Rerr MACHO_B MACHO_Berr synth_g synth_r')
+    print >>fOut, np.sqrt(res_var/(3.*len(DECam_g)))
+
+
 #        A, B = reshapeBeta(beta)
 #        printFlattened(A, fOut)
 #        printFlattened(B, fOut)
@@ -150,12 +148,6 @@ if __name__ == "__main__":
 #        printFlattened(A, fOut)
 #        printFlattened(B, fOut)
 #        printFlattened(cov_beta, fOut)
-        print >>fOut, np.sqrt(res_var/(3.*len(DECam_g)))
-    else:
-        (beta_g, sd_beta_g, resid_g) = fitPlane(DECam_g, DECam_gerr, MACHO_R, MACHO_V)
-        (beta_r, sd_beta_r, resid_r) = fitPlane(DECam_r, DECam_rerr, MACHO_R, MACHO_V)
-        (beta_i, sd_beta_i, resid_i) = fitPlane(DECam_i, DECam_ierr, MACHO_R, MACHO_V)
-        print >>fOut, matchFileName, beta_g, sd_beta_g, beta_r, sd_beta_r, beta_i, sd_beta_i
 #    print >>fOut, resid_g
 #    print >>fOut, resid_r
 #    print >>fOut, resid_i

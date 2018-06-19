@@ -26,9 +26,9 @@ def FitPhotometricPlane(dataFileName, outputFileName, sigmaClip=5.0, nIterMax=3)
     Aclipped, rmagClipped, rfit = SigmaClipFit(A, rmag, sigmaClip)
     Aclipped, gmagClipped, ifit = SigmaClipFit(A, imag, sigmaClip)
 
-    print gfit
-    print rfit
-    print ifit
+    print(gfit)
+    print(rfit)
+    print(ifit)
 
     gResid = gfit[0]*Rmed + gfit[1]*Vmed + gfit[2] - gmag
     rResid = rfit[0]*Rmed + rfit[1]*Vmed + rfit[2] - rmag
@@ -38,11 +38,11 @@ def FitPhotometricPlane(dataFileName, outputFileName, sigmaClip=5.0, nIterMax=3)
     nPts, nCols = data.shape
     
     outputFile = open(outputFileName, 'w')
-    print >>outputFile, '# F_1 T_1  S_1  Rmed Rsigma Vmed Vsigma angDist gmag gerr rmag rerr imag ierr gresid rresid iresid'
+    print('# F_1 T_1  S_1  Rmed Rsigma Vmed Vsigma angDist gmag gerr rmag rerr imag ierr gresid rresid iresid', file=outputFile)
     for n in range(nPts):
         for i in range(nCols):
-           print >>outputFile, data[n, i], 
-        print >>outputFile, gResid[n], rResid[n], iResid[n]
+           print(data[n, i], end=' ', file=outputFile) 
+        print(gResid[n], rResid[n], iResid[n], file=outputFile)
     outputFile.close()
 
 def SigmaClipFit(a, b, sigmaClip, nIterMax=3):
@@ -69,7 +69,7 @@ def SigmaClipFit(a, b, sigmaClip, nIterMax=3):
         aClipped = np.delete(aClipped, clipped, 0)
         bClipped = np.delete(bClipped, clipped, 0)
         nIter += 1
-        print nIter, nClipped, aClipped.shape, sigma
+        print(nIter, nClipped, aClipped.shape, sigma)
 
     return aClipped, bClipped, x
 

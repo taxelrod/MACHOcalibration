@@ -20,13 +20,13 @@ def lvExtract(lcsFileName, varThresh, errThresh):
 
     lowV = np.where((Rvar<varThresh) & (Vvar<varThresh) & (RmeanErr<errThresh) & (VmeanErr<errThresh))
 
-    print '# F T S Rchunk RA DEC Rmed Rmad RmeanErr Vmed Vmad VmeanErr WScoeff WScoeffp'
+    print('# F T S Rchunk RA DEC Rmed Rmad RmeanErr Vmed Vmad VmeanErr WScoeff WScoeffp')
     nCol = lcsData.shape[1]
 
     for i in lowV[0]:
         for j in range(nCol):
-            print lcsData[i,j],' ',
-        print ' '
+            print(lcsData[i,j],' ', end=' ')
+        print(' ')
 
 
 if __name__ == "__main__":

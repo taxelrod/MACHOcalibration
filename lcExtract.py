@@ -12,7 +12,7 @@ def lcExtract(lcFileName, tile, seq, Filter=True):
     Done = False
     Started = False
 
-    print '# t rmag rerr bmag berr obsid'
+    print('# t rmag rerr bmag berr obsid')
     
     while not Done:
         lcLine = F.readline()
@@ -32,10 +32,10 @@ def lcExtract(lcFileName, tile, seq, Filter=True):
             if Filter:
                 if (rmag > -15) and (bmag > -15) and (rmag <= -2) and (bmag <= -2) and (rerr < 0.2) and (berr < 0.2):
                     outLine = '%s %s %s %s %s %s' % (fields[4],fields[9],fields[10],fields[24],fields[25],fields[5])
-                    print outLine
+                    print(outLine)
             else:
                 outLine = '%s %s %s %s %s %s' % (fields[4],fields[9],fields[10],fields[24],fields[25],fields[5])
-                print outLine
+                print(outLine)
                 
         elif Started == True:
             Done = True

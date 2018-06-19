@@ -39,4 +39,4 @@ if __name__ == "__main__":
             fieldSmashData = smashData[inField]
             hdu = pf.BinTableHDU(data=fieldSmashData)
             hdu.writeto(SMASHoutName)
-            print fnum[i], len(inField[0]), SMASHoutName
+            print(fnum[i], len(inField[0]), SMASHoutName)

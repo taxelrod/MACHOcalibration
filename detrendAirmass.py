@@ -52,7 +52,7 @@ def detrendAirmass(F_fileName, Fstat_fileName, sigmaThresh, filter=True):
                 else:
                     # error exit
                     sys.exit('Input not all same field and tile')
-            if lcDict.has_key(seq):
+            if seq in lcDict:
                 lc = lcDict[seq]
                 lc[0].append(rmag)
                 lc[1].append(bmag)
@@ -64,12 +64,12 @@ def detrendAirmass(F_fileName, Fstat_fileName, sigmaThresh, filter=True):
                 lcDict[seq] = [[rmag], [bmag], [rerr], [berr], [airmass]]
 
     if debug2:
-        print lcDict
+        print(lcDict)
 
 
     lcrAll = None
 
-    for seq in lcDict.keys():
+    for seq in list(lcDict.keys()):
         lc = lcDict[seq]
         lcr = lc[0]
         lcb = lc[1]
@@ -85,7 +85,7 @@ def detrendAirmass(F_fileName, Fstat_fileName, sigmaThresh, filter=True):
         lcr -= lcrMedian
         lcb -= lcbMedian
         if debug:
-            print seq, len(lcr), len(lcairmass)
+            print(seq, len(lcr), len(lcairmass))
         if lcrAll is None:
             lcseqAll = np.zeros_like(lcr)
             lcseqAll += seq
@@ -109,17 +109,17 @@ def detrendAirmass(F_fileName, Fstat_fileName, sigmaThresh, filter=True):
     a = lcairmassAll
     a = sm.add_constant(a)
     
-    print 'Number of points: ', len(lcrAll)
+    print('Number of points: ', len(lcrAll))
         
     modr_wls = sm.WLS(lcrAll, a, weights=1./(lcrerrAll**2))
     resr_wls = modr_wls.fit()
     fitr = resr_wls.fittedvalues
-    print(resr_wls.summary())
+    print((resr_wls.summary()))
 
     modb_wls = sm.WLS(lcbAll, a, weights=1./(lcberrAll**2))
     resb_wls = modb_wls.fit()
     fitb = resb_wls.fittedvalues
-    print(resb_wls.summary())
+    print((resb_wls.summary()))
 
     fStat.write('# seq X R B Rfit Bfit Rerr Berr BmR\n')
 

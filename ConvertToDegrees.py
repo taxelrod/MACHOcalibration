@@ -15,5 +15,5 @@ for n in range(nflds):
 
     dec = Angle(data[n,2] + ' degrees')
     decdeg = dec.degree
-    print data[n,0], radeg, decdeg
+    print(data[n,0], radeg, decdeg)
 

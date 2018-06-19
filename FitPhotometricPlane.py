@@ -22,8 +22,8 @@ def FitPhotometricPlane(dataFileName, outputFileName):
     rfit, resid, rank, s = lstsq(A, rmag)
     ifit, resid, rank, s = lstsq(A, imag)
 
-    print rfit
-    print ifit
+    print(rfit)
+    print(ifit)
 
     rResid = rfit[0]*Rmed + rfit[1]*Vmed + rfit[2] - rmag
     iResid = ifit[0]*Rmed + ifit[1]*Vmed + ifit[2] - imag
@@ -31,11 +31,11 @@ def FitPhotometricPlane(dataFileName, outputFileName):
     nPts, nCols = data.shape
     
     outputFile = open(outputFileName, 'w')
-    print >>outputFile, '# F_1 T_1  S_1  Rmed Rsigma Vmed Vsigma angDist rmag rerr imag ierr rresid iresid'
+    print('# F_1 T_1  S_1  Rmed Rsigma Vmed Vsigma angDist rmag rerr imag ierr rresid iresid', file=outputFile)
     for n in range(nPts):
         for i in range(nCols):
-           print >>outputFile, data[n, i], 
-        print >>outputFile, rResid[n], iResid[n]
+           print(data[n, i], end=' ', file=outputFile) 
+        print(rResid[n], iResid[n], file=outputFile)
     outputFile.close()
     
 

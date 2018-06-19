@@ -16,7 +16,7 @@ def broadenPickles(picklesFileName, outFileName, lumWidth, measWidth, nSample):
     nrows = pickles.shape[0]
 
     fOut = open(outFileName, 'w')
-    print >>fOut, '# MACHO_B MACHO_R DECam_g DECam_r DECam_i meas_err MACHO_BR DECam_gr DECam_ri'
+    print('# MACHO_B MACHO_R DECam_g DECam_r DECam_i meas_err MACHO_BR DECam_gr DECam_ri', file=fOut)
     
     for n in range(nrows):
         for d in deltas:
@@ -25,7 +25,7 @@ def broadenPickles(picklesFileName, outFileName, lumWidth, measWidth, nSample):
             dg = DECam_g[n] + d + measWidth*np.random.randn()
             dr = DECam_r[n] + d + measWidth*np.random.randn()
             di = DECam_i[n] + d + measWidth*np.random.randn()
-            print >>fOut, mB, mR, dg, dr, di, measWidth, mB-mR, dg-dr, dr-di
+            print(mB, mR, dg, dr, di, measWidth, mB-mR, dg-dr, dr-di, file=fOut)
 
     fOut.close()
 

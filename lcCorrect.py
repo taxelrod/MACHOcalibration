@@ -23,18 +23,18 @@ def lcCorrect(lcFileName, wsFileName):
     dr = ws[:,1]
     db = ws[:,2]
 
-    print '# t rcorr rerr bcorr berr rmag bmag dr db'
+    print('# t rcorr rerr bcorr berr rmag bmag dr db')
 
     
     for (i,t) in enumerate(lctimes):
         idx = np.where(t==wstimes)[0]
         if len(idx)==0:
-            print >>sys.stderr, 'Warning time %f not found' % t
+            print('Warning time %f not found' % t, file=sys.stderr)
             continue
         else:
             rcorr = rmag[i]+dr[idx]
             bcorr = bmag[i]+db[idx]
-            print t, rcorr[0], rerr[i], bcorr[0], berr[i], rmag[i], bmag[i], dr[idx][0], db[idx][0]
+            print(t, rcorr[0], rerr[i], bcorr[0], berr[i], rmag[i], bmag[i], dr[idx][0], db[idx][0])
 
 
 def lstsqFit(lccorrFileName):

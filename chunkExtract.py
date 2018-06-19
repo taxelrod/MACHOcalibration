@@ -10,7 +10,7 @@ import sys
 def chunkExtract(starFileName, redChunk):
     F = open(starFileName)
 
-    print '# field tile seq ra dec'
+    print('# field tile seq ra dec')
     
     while True:
         lcLine = F.readline()
@@ -25,7 +25,7 @@ def chunkExtract(starFileName, redChunk):
             ra = fields[3]
             dec = fields[4]
             outLine = '%d %d %d %s %s' % (field, tile, seq, ra, dec)
-            print outLine
+            print(outLine)
 
 if __name__ == "__main__":
 

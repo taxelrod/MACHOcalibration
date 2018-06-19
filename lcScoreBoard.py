@@ -23,8 +23,8 @@ class LcScoreBoard(object):
 
     def addLC(self, id, lcData):
 
-        if self.psfDict.has_key(id):
-            raise ValueError, 'light curve with id %d already in LcScoreBoard' % id
+        if id in self.psfDict:
+            raise ValueError('light curve with id %d already in LcScoreBoard' % id)
 
         # name the columns of the incoming data
 
@@ -113,7 +113,7 @@ class LcScoreBoard(object):
 
         templateId = np.where(self.obsid==templateObs)[0]
         if len(templateId) == 0:
-            raise ValueError, 'template obs %d not found' % templateObsR
+            raise ValueError('template obs %d not found' % templateObsR)
         else:
             templateRmag = self.rmag[:,templateId]  # template R mag for each psf star
             templateBmag = self.bmag[:,templateId]  # template B mag for each psf star
@@ -199,7 +199,7 @@ class LcScoreBoard(object):
             idBcut = np.where((validB) & (np.abs(bdev)>bsigcut))[0]
             self.validB[idBcut, i] = False
             if self.debug:
-                print >>self.log, t, rsigcut, bsigcut, validR, validB, idRcut, idBcut
+                print(t, rsigcut, bsigcut, validR, validB, idRcut, idBcut, file=self.log)
 
         if self.debug:
             self.log.flush()
@@ -231,7 +231,7 @@ class LcScoreBoard(object):
             idBcut = np.where((validB) & (np.abs(bdev)>babsnormcut))[0]
             self.validB[idBcut, i] = False
             if self.debug:
-                print >>self.log, 'DDB: ',t, rabsnormcut, babsnormcut, validR, validB, idRcut, idBcut
+                print('DDB: ',t, rabsnormcut, babsnormcut, validR, validB, idRcut, idBcut, file=self.log)
 
         if self.debug:
             self.log.flush()

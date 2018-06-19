@@ -27,5 +27,5 @@ for n in range(nStars):
     decMin = min(decdeg, decMin)
     decMax = max(decdeg, decMax)
     
-print raMin, raMax, decMin, decMax
+print(raMin, raMax, decMin, decMax)
 

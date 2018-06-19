@@ -72,16 +72,16 @@ def optLC(lcsb, a, b, id=1):
     gp.compute(t, rerr)
 
     # Print the initial ln-likelihood.
-    print(gp.lnlikelihood(rdev))
+    print((gp.lnlikelihood(rdev)))
 
     # Run the optimization routine.
     p0 = gp.get_parameter_vector()
     results = op.minimize(nll, p0, jac=grad_nll)
-    print results.x
+    print(results.x)
 
     # Update the kernel and print the final log-likelihood.
     gp.set_parameter_vector(results.x)
-    print(gp.lnlikelihood(rdev))
+    print((gp.lnlikelihood(rdev)))
 
     t_pred = np.linspace(np.min(t), np.max(t), 5000)
     pred_r, pred_rerr = gp.predict(rdev, t_pred, return_var=True)

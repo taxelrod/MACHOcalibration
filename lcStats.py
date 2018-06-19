@@ -61,7 +61,7 @@ def lcStats(F_fileName, Fstat_fileName, S_fileName=None, filter=True):
                 else:
                     # error exit
                     sys.exit('Input not all same field and tile')
-            if lcDict.has_key(seq):
+            if seq in lcDict:
                 lc = lcDict[seq]
                 lc[0].append(rmag)
                 lc[1].append(bmag)
@@ -72,14 +72,14 @@ def lcStats(F_fileName, Fstat_fileName, S_fileName=None, filter=True):
                 lcDict[seq] = [[rmag], [bmag], [rerr], [berr]]
 
     if debug:
-        print lcDict
+        print(lcDict)
 
     if S_fileName is not None:
         fStat.write('# F T S Rchunk RA DEC Rmed Rmad RmeanErr Vmed Vmad VmeanErr WScoeff WScoeffp\n')
     else:
         fStat.write('# F T S Rmed Rmad RmeanErr Vmed Vmad VmeanErr WScoeff WScoeffp\n')
 
-    for seq in lcDict.keys():
+    for seq in list(lcDict.keys()):
         lc = lcDict[seq]
         lcr = np.array(lc[0])
         lcb = np.array(lc[1])
@@ -97,7 +97,7 @@ def lcStats(F_fileName, Fstat_fileName, S_fileName=None, filter=True):
         if S_fileName is not None:
             idStar = np.where((sTile==tile) & (sSeq==seq))
             if len(idStar[0])==0:
-                print 'Star fts %d %d %d not found in Star file' % (field, tile, seq)
+                print('Star fts %d %d %d not found in Star file' % (field, tile, seq))
                 raise ValueError
             thisStar = starData[idStar,:][0][0]
             redChunk = int(thisStar[7])

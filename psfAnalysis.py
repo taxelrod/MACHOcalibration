@@ -33,7 +33,7 @@ def psfAnalysisDriver(field, psfFileName, photFileDir, outputLcPrefix, outputSum
     for tile in uniqueTiles:
         photFileName = '%s/F_%d.%d' % (photFileDir, field, tile)
         if not os.access(photFileName, os.F_OK):
-            print photFileName + ' not found'
+            print(photFileName + ' not found')
             bailout = True
 
     if bailout:
@@ -108,8 +108,8 @@ def loadPsfLcs(lcsb, psfFileName, photFileName, outputLcPrefix, outputSummaryNam
 
             FlcName = '%s_%d_%d.dat' % (outputLcPrefix, psfStarTile, psfStarSeq)
             Flc = open(FlcName, 'w')
-            print >>Flc, '# t obsid rmag rerr bmag berr'
+            print('# t obsid rmag rerr bmag berr', file=Flc)
 
             for i in range(ngood):
-                print >>Flc, time[i], obsid[i], rmag[i], rerr[i], bmag[i], berr[i]
+                print(time[i], obsid[i], rmag[i], rerr[i], bmag[i], berr[i], file=Flc)
             Flc.close()

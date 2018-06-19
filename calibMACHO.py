@@ -40,7 +40,7 @@ def calibPhot(F_fileName, DumpStar_fileName, Fcal_fileName):
             seq = int(starFields[2])
             chunk_R_wop = int(starFields[7])
 #  if chunkDicts contains tile, then add seq to that dict, else make new one
-            if not chunkDicts.has_key(tile):
+            if tile not in chunkDicts:
                 chunkDicts[tile] = {}
             chunkDict = chunkDicts[tile]
             chunkDict[seq] = chunk_R_wop
@@ -48,9 +48,9 @@ def calibPhot(F_fileName, DumpStar_fileName, Fcal_fileName):
     fStar.close()
 
     if debug:
-        for tile in chunkDicts.keys():
-            print tile
-            print chunkDicts[tile]
+        for tile in list(chunkDicts.keys()):
+            print(tile)
+            print(chunkDicts[tile])
 
 
     activeField = field
@@ -82,7 +82,7 @@ def calibPhot(F_fileName, DumpStar_fileName, Fcal_fileName):
             if rmag > -2 or bmag > -2:
                 continue
             if field != activeField:
-                print "Error: fields for %s and %s do not match" % (DumpStar_fileName, F_fileName)
+                print("Error: fields for %s and %s do not match" % (DumpStar_fileName, F_fileName))
                 return
             if tile != activeTile:
                 chunkDict = chunkDicts[tile]

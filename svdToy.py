@@ -41,17 +41,17 @@ def buildTSlist(dumpStarFileName, redChunk):
 def loadLcFromList(photDir, field, tsList):
     global nLc, lcsb
 
-    for t in tsList.keys():
+    for t in list(tsList.keys()):
         # load up full data structure for this tile with np.loadtxt
         photFileName = path.join(photDir, 'F_%d.%d' % (field, t))
         if not path.isfile(photFileName):
-            print 'Skipping %s' % photFileName
+            print('Skipping %s' % photFileName)
             continue
         photData = np.loadtxt(photFileName, delimiter=';', usecols=(2,3,4,9,10,24,25,5))
         photTile = np.fix(photData[:,0])
         ibad = np.where(photTile != t)[0]
         if len(ibad) > 0:
-            raise ValueError, 'File %s contains data not for tile %d' % (photFileName, t)
+            raise ValueError('File %s contains data not for tile %d' % (photFileName, t))
 
         photSeq = np.fix(photData[:,1])
         seqList = tsList[t]
@@ -115,7 +115,7 @@ def svdLC(minValidFrac=0, threshRmag=0):
     goodLc = np.where((validRpts >= minValidFrac*len(t)) & (avgRmag < threshRmag))[0]
     nGoodLc = len(goodLc)
 
-    print 'svdLC: number of included lightcurves = %d' % nGoodLc
+    print('svdLC: number of included lightcurves = %d' % nGoodLc)
 
     for (i, tx) in enumerate(t):
         badId = np.where(lcsb.validR[goodLc,i]==False)[0]

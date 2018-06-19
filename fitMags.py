@@ -82,8 +82,8 @@ def printFlattened(arr, file):
     flatArr = arr.flatten()
     nElem = len(flatArr)
     for n in range(nElem):
-        print >>file, flatArr[n],
-    print >>file, ''
+        print(flatArr[n], end=' ', file=file)
+    print('', file=file)
     
 if __name__ == "__main__":
 
@@ -94,7 +94,7 @@ if __name__ == "__main__":
     fOut = open(outFileName, 'a')
     sys.stdout = fOut
     
-    print >>fOut, matchFileName
+    print(matchFileName, file=fOut)
     matchData = np.loadtxt(matchFileName)
     if matchFmt:
         DECam_g = matchData[:,17]
@@ -125,8 +125,8 @@ if __name__ == "__main__":
         meas_err = meas_err[filt_gr]
         MACHO_Rerr = MACHO_Verr = DECam_gerr = DECam_rerr = DECam_ierr = meas_err        
 
-    goodId = range(len(DECam_g))   #  all good to begin
-    print >>fOut, -1, len(DECam_g)
+    goodId = list(range(len(DECam_g)))   #  all good to begin
+    print(-1, len(DECam_g), file=fOut)
     
     for n in range(nIter):
         if threeD:
@@ -137,7 +137,7 @@ if __name__ == "__main__":
             synth_g = synth_gr[0,:]
             synth_r = synth_gr[1,:]
             goodId = filterOnDist(DECam_g, synth_g, nSigma)
-            print >>fOut, n, len(goodId[0])
+            print(n, len(goodId[0]), file=fOut)
                    
 
     nPts = len(synth_g)
@@ -153,7 +153,7 @@ if __name__ == "__main__":
     outData[:,8] = synth_g.transpose()
     outData[:,9] = synth_r.transpose()
     np.savetxt(outSynthFileName, outData, header='DECam_g DECam_gerr DECam_r DECam_rerr MACHO_R MACHO_Rerr MACHO_B MACHO_Berr synth_g synth_r')
-    print >>fOut, np.sqrt(res_var/(3.*len(DECam_g)))
+    print(np.sqrt(res_var/(3.*len(DECam_g))), file=fOut)
 
 
 #        A, B = reshapeBeta(beta)

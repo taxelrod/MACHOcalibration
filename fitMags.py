@@ -45,10 +45,22 @@ def filterOnDist(DECam_g, synth_g, nSigma):
     return goodId
                          
         
+
 def reshapeBeta(beta):
-    A = np.reshape(beta[0:-lenY], (lenY,lenX))
-    B = np.reshape(beta[lenX*lenY:], (lenY,1))
+    if threeD:
+        A = np.reshape(beta[0:-lenY], (lenY, lenX))
+        B = np.reshape(beta[lenX*lenY:], (lenY,1))
+    else:
+        A = np.zeros((2,2))
+        A[0,0] = beta[0]
+        A[0,1] = 1. - A[0,0]
+        A[1,0] = beta[1]
+        A[1,1] = 1. - A[1,0]
+        B = np.zeros((2,1))
+        B[0,0] = beta[2]
+        B[1,0] = beta[3]
     return A, B
+
 
 def fODR(Beta, x):
     A, B = reshapeBeta(Beta)
@@ -57,7 +69,10 @@ def fODR(Beta, x):
 def fitODR(y, yerr, x, xerr):
     odrData = odr.RealData(x, y, sx=xerr, sy=yerr)
     odrLin = odr.Model(fODR)
-    odrModel = odr.ODR(odrData, odrLin, beta0=np.zeros((lenY*lenX + lenY)), maxit=1000)
+    if threeD:
+        odrModel = odr.ODR(odrData, odrLin, beta0=np.zeros((lenY*lenX + lenY)))
+    else:
+        odrModel = odr.ODR(odrData, odrLin, beta0=np.zeros((4)))
     res=odrModel.run()
     res.pprint()
     return res.beta, res.sd_beta, res.cov_beta, res.res_var

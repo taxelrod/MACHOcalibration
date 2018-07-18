@@ -5,9 +5,13 @@ below the threshold.  The variability is quantified by Rmad/RmeanErr and similar
 """
 import sys
 import numpy as np
+from os.path import isfile
 
 def lvExtract(lcsFileName, varThresh, errThresh):
 
+    if not isfile(lcsFileName):
+        return
+    
     lcsData = np.loadtxt(lcsFileName, dtype=str)
 
     Rmad = lcsData[:,7].astype(float)

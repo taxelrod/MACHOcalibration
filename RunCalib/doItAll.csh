@@ -2,6 +2,8 @@
 
 set field=$1
 
+./cleanField $field
+
 ./lcstat.csh $field
 
 ./lvstat.csh $field

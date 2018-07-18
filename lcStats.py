@@ -12,7 +12,6 @@ median mag and stdev mag.
 import numpy as np
 from scipy.stats import pearsonr
 from statsmodels.robust import mad
-import string
 import sys
 import re
 from astropy import units as u
@@ -43,7 +42,7 @@ def lcStats(F_fileName, Fstat_fileName, S_fileName=None, filter=True):
         if photLine == '':
             eof = True
         else:
-            photFields = string.split(photLine, ';')
+            photFields = photLine.split(';')
             field = int(photFields[1])
             tile = int(photFields[2])
             seq = int(photFields[3])

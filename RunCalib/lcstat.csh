@@ -5,7 +5,7 @@ setenv TMP /p/lscratchh/axelrod2/tmp
 setenv STAT /p/lscratchh/axelrod2/lcStat
 
 set field=$1
-
+set CODE=..
 set OUTSTAT=${STAT}/F_$field
 
 if (! -d $OUTSTAT) then
@@ -15,6 +15,6 @@ endif
 foreach f (${MPHOT}/F_$field/*.gz)
 	echo $f
 	gunzip -c $f > ${TMP}/$f:t:r
-	./lcStats.py ${TMP}/$f:t:r ${OUTSTAT}/$f:t:r.lcstat ${MSTAR}/DumpStar_$field.txt
+	${CODE}/lcStats.py ${TMP}/$f:t:r ${OUTSTAT}/$f:t:r.lcstat ${MSTAR}/DumpStar_$field.txt
 	rm -f ${TMP}/$f:t:r
 end

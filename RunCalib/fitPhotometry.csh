@@ -7,8 +7,8 @@ setenv STAT /p/lscratchh/axelrod2/lcStat
 setenv OUT /p/lscratchh/axelrod2/XMATCH
 
 set field=$1
-
+set CODE=..
 set OUTMATCH=${OUT}/F_$field
 
-./fitMags.py $OUTMATCH/F_$field.all.xmatch $OUTMATCH/F_$field.photfit
+${CODE}/fitMags.py $OUTMATCH/F_$field.all.xmatch $OUTMATCH/F_$field.photfit
 

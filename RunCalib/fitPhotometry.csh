@@ -10,5 +10,5 @@ set field=$1
 set CODE=..
 set OUTMATCH=${OUT}/F_$field
 
-${CODE}/fitMags.py $OUTMATCH/F_$field.all.xmatch $OUTMATCH/F_$field.photfit
+${CODE}/fitMags.py $OUTMATCH/F_$field.all.xmatch $OUTMATCH/F_$field.photfit $OUTMATCH/F_$field.synthphot
 

@@ -161,7 +161,7 @@ int main( int argc, char *argv[] )
 	 find_mode = FindPSF;
 	 disp_mode = DispTableFmt;
       }
-      else if ( sscanf(argv[i],"%hu.%hu",&tile,&seqn) == 3 && j > 0 ) {
+      else if ( sscanf(argv[i],"%hu.%hu",&tile,&seqn) == 2 ) {
 	 find_mode = FindStarid;
       }
       else if ( sscanf( argv[i], "%d", &recno ) == 1 && recno >= 0 ) {

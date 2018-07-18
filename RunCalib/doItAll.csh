@@ -2,7 +2,7 @@
 
 set field=$1
 
-./cleanField $field
+./cleanField.csh $field
 
 ./lcstat.csh $field
 

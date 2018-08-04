@@ -2,7 +2,6 @@
 
 import sys
 import numpy as np
-import statsmodels.api as sm
 import scipy.odr as odr
 
 threeD = False
@@ -42,7 +41,8 @@ def filterOnDist(DECam_g, synth_g, nSigma):
 
     sigma = np.std(dist)
     goodId = np.where(dist<nSigma*sigma)
-    return goodId
+    print('filterOnDist', np.mean(dist), sigma, len(DECam_g), len(goodId[0]))
+    return goodId[0]
                          
         
 
@@ -136,8 +136,10 @@ if __name__ == "__main__":
             synth_gr = fODR(beta, np.vstack((MACHO_R, MACHO_V)))
             synth_g = synth_gr[0,:]
             synth_r = synth_gr[1,:]
-            goodId = filterOnDist(DECam_g, synth_g, nSigma)
-            print(n, len(goodId[0]), file=fOut)
+            goodId_g = filterOnDist(DECam_g, synth_g, nSigma)
+            goodId_r = filterOnDist(DECam_r, synth_r, nSigma)
+            goodId = np.unique(np.concatenate((goodId_g,goodId_r)))
+            print(n, len(goodId), file=fOut)
                    
 
     nPts = len(synth_g)

@@ -16,7 +16,7 @@ if (! -d $OUTMATCH) then
 endif
 
 set OUTMATCHALL=$OUTMATCH/F_$field.all.xmatch
-set OUTSTATALL=$OUTMATCH/F_$field.all.lcstat
+set OUTSTATALL=$OUTSTAT/F_$field.all.lcstat
 set OUTUNBLENDED=$OUTMATCH/F_$field.unblended.xmatch
 set OUTUNBLENDEDTMP=$OUTUNBLENDED.tmp
 rm -f $OUTUNBLENDED

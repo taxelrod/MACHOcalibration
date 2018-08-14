@@ -26,4 +26,4 @@ touch $OUTUNBLENDEDTMP
 
 stilts tmatch2 matcher=sky find=all ifmt1=ascii values1="RA_1 DEC_1" ifmt2=ascii values2="RA DEC" omode=out ofmt=ascii ocmd='select NULL_GroupSize' params="3" out=${OUTUNBLENDEDTMP} ${OUTMATCHALL} ${OUTSTATALL}
 
-sed 's/""/0.0/' $OUTUNBLENDEDTMP > $OUTUNBLENDED
+sed 's/""/0.0/g' $OUTUNBLENDEDTMP > $OUTUNBLENDED

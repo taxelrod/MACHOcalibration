@@ -11,6 +11,6 @@ set OUTCOMBSTAT=${OUTSTAT}/F_$field.all.lcstat
 
 rm -f $OUTCOMBSTAT
 
-foreach f (${OUTSTAT}/*[0-9]+.lcstat)
+foreach f (${OUTSTAT}/*[0-9].lcstat)
 	cat $f >> $OUTCOMBSTAT
 end

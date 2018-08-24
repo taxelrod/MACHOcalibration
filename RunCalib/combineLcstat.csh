@@ -10,6 +10,7 @@ set OUTSTAT=${STAT}/F_$field
 set OUTCOMBSTAT=${OUTSTAT}/F_$field.all.lcstat
 
 rm -f $OUTCOMBSTAT
+touch $OUTCOMBSTAT
 
 foreach f (${OUTSTAT}/*[0-9].lcstat)
 	cat $f >> $OUTCOMBSTAT

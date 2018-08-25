@@ -71,9 +71,9 @@ def fitODR(y, yerr, x, xerr):
     odrData = odr.RealData(x, y, sx=xerr, sy=yerr)
     odrLin = odr.Model(fODR)
     if threeD:
-        odrModel = odr.ODR(odrData, odrLin, beta0=np.zeros((lenY*lenX + lenY)))
+        odrModel = odr.ODR(odrData, odrLin, beta0=np.zeros((lenY*lenX + lenY)), full_output=1)
     else:
-        odrModel = odr.ODR(odrData, odrLin, beta0=np.zeros((4)))
+        odrModel = odr.ODR(odrData, odrLin, beta0=np.zeros((4)), full_output=1)
     res=odrModel.run()
     res.pprint()
     return res.beta, res.sd_beta, res.cov_beta, res.res_var
@@ -162,7 +162,7 @@ if __name__ == "__main__":
             goodId = np.unique(np.concatenate((goodId_g,goodId_r)))
             print(n, len(goodId), file=fOut)
 
-    print(np.sqrt(res_var/(3.*len(DECam_g_Blue))), file=fOut)
+    print(np.sqrt(res_var/(3.*len(DECam_g_Blue[goodId]))), file=fOut)
     synth_g_blue = synth_g
     synth_r_blue = synth_r
     
@@ -198,7 +198,7 @@ if __name__ == "__main__":
             print(n, len(goodId), file=fOut)
                    
 
-    print(np.sqrt(res_var/(3.*len(DECam_g_Red))), file=fOut)
+    print(np.sqrt(res_var/(3.*len(DECam_g_Red[goodId]))), file=fOut)
     synth_g_full = np.concatenate((synth_g_blue, synth_g))
     synth_r_full = np.concatenate((synth_r_blue, synth_r))
     

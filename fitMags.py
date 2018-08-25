@@ -162,9 +162,12 @@ if __name__ == "__main__":
             goodId = np.unique(np.concatenate((goodId_g,goodId_r)))
             print(n, len(goodId), file=fOut)
 
-    print(np.sqrt(sum_square/len(DECam_g_Blue[goodId])), file=fOut)
     synth_g_blue = synth_g
     synth_r_blue = synth_r
+
+    calErr_g_blue = synth_g_blue - DECam_g_Blue[goodId]
+    calErr_r_blue = synth_r_blue - DECam_r_Blue[goodId]
+    print('std calib error (g, r): ', np.std(calErr_g_blue), np.std(calErr_r_blue), file=fOut)
     
 # Red side of CMD split
 
@@ -198,9 +201,12 @@ if __name__ == "__main__":
             print(n, len(goodId), file=fOut)
                    
 
-    print(np.sqrt(sum_square/len(DECam_g_Red[goodId])), file=fOut)
     synth_g_full = np.concatenate((synth_g_blue, synth_g))
     synth_r_full = np.concatenate((synth_r_blue, synth_r))
+    
+    calErr_g_red = synth_g_red - DECam_g_Red[goodId]
+    calErr_r_red = synth_r_red - DECam_r_Red[goodId]
+    print('std calib error (g, r): ', np.std(calErr_g_red), np.std(calErr_r_red), file=fOut)
     
     nPts = len(synth_g_full)
     outData = np.zeros((nPts, 13))

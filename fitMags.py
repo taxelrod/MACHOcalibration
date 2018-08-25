@@ -18,6 +18,9 @@ else:
     lenY = 2
 lenX = 2
 
+def mad(x):
+    return np.median(np.abs(x - np.median(x))
+                     
 def dist3D(x0, x1, x2):
     # minimum distance from x0 to the line formed by x1 and x2.  All coords are 2D or 3D.
     # see http://mathworld.wolfram.com/Point-LineDistance3-Dimensional.html
@@ -40,7 +43,7 @@ def filterOnDist(DECam_g, synth_g, nSigma):
         d, dvec = dist3D(x0, x1, x2)
         dist[i] = d
 
-    sigma = np.std(dist)
+    sigma = mad(dist)
     goodId = np.where(dist<nSigma*sigma)
     print('filterOnDist', np.mean(dist), sigma, len(DECam_g), len(goodId[0]))
     return goodId[0]
@@ -167,7 +170,7 @@ if __name__ == "__main__":
     synth_g_blue = synth_g
     synth_r_blue = synth_r
 
-    print('std calib error (g, r): ', np.std(calErr_g_blue), np.std(calErr_r_blue), file=fOut)
+    print('std calib error (g, r): ', mad(calErr_g_blue), mad(calErr_r_blue), file=fOut)
     
 # Red side of CMD split
 
@@ -206,7 +209,7 @@ if __name__ == "__main__":
     synth_g_full = np.concatenate((synth_g_blue, synth_g))
     synth_r_full = np.concatenate((synth_r_blue, synth_r))
     
-    print('std calib error (g, r): ', np.std(calErr_g_red), np.std(calErr_r_red), file=fOut)
+    print('std calib error (g, r): ', mad(calErr_g_red), mad(calErr_r_red), file=fOut)
     
     nPts = len(synth_g_full)
     outData = np.zeros((nPts, 13))

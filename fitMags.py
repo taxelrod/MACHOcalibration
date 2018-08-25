@@ -195,8 +195,8 @@ if __name__ == "__main__":
             synth_gr = fODR(beta, np.vstack((MACHO_R[goodIdRed], MACHO_V[goodIdRed])))
             synth_g = synth_gr[0,:]
             synth_r = synth_gr[1,:]
-            calErr_g_red = synth_g_red - DECam_g[goodIdRed]
-            calErr_r_red = synth_r_red - DECam_r[goodIdRed]
+            calErr_g_red = synth_g - DECam_g[goodIdRed]
+            calErr_r_red = synth_r - DECam_r[goodIdRed]
             goodId_g = filterOnDist(DECam_g_Red, synth_g, nSigma)
             goodId_r = filterOnDist(DECam_r_Red, synth_r, nSigma)
             goodId = np.unique(np.concatenate((goodId_g,goodId_r)))

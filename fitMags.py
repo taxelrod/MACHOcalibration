@@ -73,7 +73,7 @@ def fitODR(y, yerr, x, xerr):
     if threeD:
         odrModel = odr.ODR(odrData, odrLin, beta0=np.zeros((lenY*lenX + lenY)))
     else:
-        odrModel = odr.ODR(odrData, odrLin, beta0=np.zeros((4)), full_output=1)
+        odrModel = odr.ODR(odrData, odrLin, beta0=np.zeros((4)))
     res=odrModel.run()
     res.pprint()
     return res.beta, res.sd_beta, res.cov_beta, res.sum_square

@@ -71,7 +71,7 @@ def fitODR(y, yerr, x, xerr):
     odrData = odr.RealData(x, y, sx=xerr, sy=yerr)
     odrLin = odr.Model(fODR)
     if threeD:
-        odrModel = odr.ODR(odrData, odrLin, beta0=np.zeros((lenY*lenX + lenY)), full_output=1)
+        odrModel = odr.ODR(odrData, odrLin, beta0=np.zeros((lenY*lenX + lenY)))
     else:
         odrModel = odr.ODR(odrData, odrLin, beta0=np.zeros((4)), full_output=1)
     res=odrModel.run()

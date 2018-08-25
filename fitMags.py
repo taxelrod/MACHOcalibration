@@ -76,7 +76,7 @@ def fitODR(y, yerr, x, xerr):
         odrModel = odr.ODR(odrData, odrLin, beta0=np.zeros((4)), full_output=1)
     res=odrModel.run()
     res.pprint()
-    return res.beta, res.sd_beta, res.cov_beta, res.res_var
+    return res.beta, res.sd_beta, res.cov_beta, res.sum_square
 
 
 def printFlattened(arr, file):
@@ -153,7 +153,7 @@ if __name__ == "__main__":
         if threeD:
             (beta, sd_beta, cov_beta, res_var) = fitODR(np.vstack((DECam_g, DECam_r, DECam_i)), np.vstack((DECam_gerr, DECam_rerr, DECam_ierr)), np.vstack((MACHO_R, MACHO_V)), np.vstack((MACHO_Rerr, MACHO_Verr)))
         else:
-            (beta, sd_beta, cov_beta, res_var) = fitODR(np.vstack((DECam_g_Blue[goodId], DECam_r_Blue[goodId])), np.vstack((DECam_gerr_Blue[goodId], DECam_rerr_Blue[goodId])), np.vstack((MACHO_R_Blue[goodId], MACHO_V_Blue[goodId])), np.vstack((MACHO_Rerr_Blue[goodId], MACHO_Verr_Blue[goodId])))
+            (beta, sd_beta, cov_beta, sum_square) = fitODR(np.vstack((DECam_g_Blue[goodId], DECam_r_Blue[goodId])), np.vstack((DECam_gerr_Blue[goodId], DECam_rerr_Blue[goodId])), np.vstack((MACHO_R_Blue[goodId], MACHO_V_Blue[goodId])), np.vstack((MACHO_Rerr_Blue[goodId], MACHO_Verr_Blue[goodId])))
             synth_gr = fODR(beta, np.vstack((MACHO_R[goodIdBlue], MACHO_V[goodIdBlue])))
             synth_g = synth_gr[0,:]
             synth_r = synth_gr[1,:]
@@ -162,7 +162,7 @@ if __name__ == "__main__":
             goodId = np.unique(np.concatenate((goodId_g,goodId_r)))
             print(n, len(goodId), file=fOut)
 
-    print(np.sqrt(res_var/(3.*len(DECam_g_Blue[goodId]))), file=fOut)
+    print(np.sqrt(sum_square/len(DECam_g_Blue[goodId])), file=fOut)
     synth_g_blue = synth_g
     synth_r_blue = synth_r
     
@@ -188,7 +188,7 @@ if __name__ == "__main__":
         if threeD:
             (beta, sd_beta, cov_beta, res_var) = fitODR(np.vstack((DECam_g, DECam_r, DECam_i)), np.vstack((DECam_gerr, DECam_rerr, DECam_ierr)), np.vstack((MACHO_R, MACHO_V)), np.vstack((MACHO_Rerr, MACHO_Verr)))
         else:
-            (beta, sd_beta, cov_beta, res_var) = fitODR(np.vstack((DECam_g_Red[goodId], DECam_r_Red[goodId])), np.vstack((DECam_gerr_Red[goodId], DECam_rerr_Red[goodId])), np.vstack((MACHO_R_Red[goodId], MACHO_V_Red[goodId])), np.vstack((MACHO_Rerr_Red[goodId], MACHO_Verr_Red[goodId])))
+            (beta, sd_beta, cov_beta, sum_square) = fitODR(np.vstack((DECam_g_Red[goodId], DECam_r_Red[goodId])), np.vstack((DECam_gerr_Red[goodId], DECam_rerr_Red[goodId])), np.vstack((MACHO_R_Red[goodId], MACHO_V_Red[goodId])), np.vstack((MACHO_Rerr_Red[goodId], MACHO_Verr_Red[goodId])))
             synth_gr = fODR(beta, np.vstack((MACHO_R[goodIdRed], MACHO_V[goodIdRed])))
             synth_g = synth_gr[0,:]
             synth_r = synth_gr[1,:]
@@ -198,7 +198,7 @@ if __name__ == "__main__":
             print(n, len(goodId), file=fOut)
                    
 
-    print(np.sqrt(res_var/(3.*len(DECam_g_Red[goodId]))), file=fOut)
+    print(np.sqrt(sum_square/len(DECam_g_Red[goodId])), file=fOut)
     synth_g_full = np.concatenate((synth_g_blue, synth_g))
     synth_r_full = np.concatenate((synth_r_blue, synth_r))
     

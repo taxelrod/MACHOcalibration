@@ -19,7 +19,7 @@ else:
 lenX = 2
 
 def mad(x):
-    return np.median(np.abs(x - np.median(x))
+    return np.median(np.abs(x - np.median(x)))
                      
 def dist3D(x0, x1, x2):
     # minimum distance from x0 to the line formed by x1 and x2.  All coords are 2D or 3D.

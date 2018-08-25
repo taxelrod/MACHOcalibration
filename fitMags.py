@@ -157,6 +157,8 @@ if __name__ == "__main__":
             synth_gr = fODR(beta, np.vstack((MACHO_R[goodIdBlue], MACHO_V[goodIdBlue])))
             synth_g = synth_gr[0,:]
             synth_r = synth_gr[1,:]
+            calErr_g_blue = synth_g - DECam_g[goodIdBlue]
+            calErr_r_blue = synth_r - DECam_r[goodIdBlue]
             goodId_g = filterOnDist(DECam_g_Blue, synth_g, nSigma)
             goodId_r = filterOnDist(DECam_r_Blue, synth_r, nSigma)
             goodId = np.unique(np.concatenate((goodId_g,goodId_r)))
@@ -165,8 +167,6 @@ if __name__ == "__main__":
     synth_g_blue = synth_g
     synth_r_blue = synth_r
 
-    calErr_g_blue = synth_g_blue - DECam_g_Blue[goodIdBlue]
-    calErr_r_blue = synth_r_blue - DECam_r_Blue[goodIdBlue]
     print('std calib error (g, r): ', np.std(calErr_g_blue), np.std(calErr_r_blue), file=fOut)
     
 # Red side of CMD split
@@ -195,6 +195,8 @@ if __name__ == "__main__":
             synth_gr = fODR(beta, np.vstack((MACHO_R[goodIdRed], MACHO_V[goodIdRed])))
             synth_g = synth_gr[0,:]
             synth_r = synth_gr[1,:]
+            calErr_g_red = synth_g_red - DECam_g[goodIdRed]
+            calErr_r_red = synth_r_red - DECam_r[goodIdRed]
             goodId_g = filterOnDist(DECam_g_Red, synth_g, nSigma)
             goodId_r = filterOnDist(DECam_r_Red, synth_r, nSigma)
             goodId = np.unique(np.concatenate((goodId_g,goodId_r)))
@@ -204,8 +206,6 @@ if __name__ == "__main__":
     synth_g_full = np.concatenate((synth_g_blue, synth_g))
     synth_r_full = np.concatenate((synth_r_blue, synth_r))
     
-    calErr_g_red = synth_g_red - DECam_g_Red[goodIdRed]
-    calErr_r_red = synth_r_red - DECam_r_Red[goodIdRed]
     print('std calib error (g, r): ', np.std(calErr_g_red), np.std(calErr_r_red), file=fOut)
     
     nPts = len(synth_g_full)

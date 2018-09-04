@@ -6,6 +6,9 @@ import pandas as pd
 import re
 
 pathRE = re.compile('.*\/F_(\d+)\/.*')
+
+LMC_CMD_split = 0.1   # split in MACHO_V - MACHO_R; separate fits on each side
+
 #
 # functions from fitMags.py
 #
@@ -46,18 +49,18 @@ if __name__ == "__main__":
 
     fieldCalInfo = photdf[photdf.field==fieldTarget]
 
-    betaRed = np.array([fieldCalInfo.rdbetag.values[0], fieldCalInfo.rdbetar.values[0], fieldCalInfo.rdzpg.values[0], fieldCalInfo.rdzpr.values[0]])
+    if MACHO_V - MACHO_R > LMC_CMD_split:
+        betaRed = np.array([fieldCalInfo.rdbetag.values[0], fieldCalInfo.rdbetar.values[0], fieldCalInfo.rdzpg.values[0], fieldCalInfo.rdzpr.values[0]])
+        cal_Red = fODR(betaRed, np.vstack((MACHO_R, MACHO_V)))
+        cal_g = cal_Red[0,0]
+        cal_r = cal_Red[1,0]
+    else:
+        betaBlue = np.array([fieldCalInfo.blbetag.values[0], fieldCalInfo.blbetar.values[0], fieldCalInfo.blzpg.values[0], fieldCalInfo.blzpr.values[0]])
+        cal_Blue = fODR(betaBlue, np.vstack((MACHO_R, MACHO_V)))
+        cal_g = cal_Blue[0,0]
+        cal_r = cal_Blue[1,0]
 
-    betaBlue = np.array([fieldCalInfo.blbetag.values[0], fieldCalInfo.blbetar.values[0], fieldCalInfo.blzpg.values[0], fieldCalInfo.blzpr.values[0]])
+    print(cal_r, cal_g)
 
-    print(betaRed)
-    print(betaBlue)
-    
-    cal_Red = fODR(betaRed, np.vstack((MACHO_R, MACHO_V)))
-
-    cal_Blue = fODR(betaBlue, np.vstack((MACHO_R, MACHO_V)))
-
-    print(cal_Red)
-    print(cal_Blue)
 
     

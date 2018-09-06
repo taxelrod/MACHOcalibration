@@ -61,6 +61,7 @@ if __name__ == "__main__":
         # make a one row dataframe
     elif narg==3:
         lcFile = sys.argv[1]
+        lcOutFile = sys.argv[2]
         lcData = loadLightCurve(lcFile)
     else:
         usage()
@@ -73,25 +74,42 @@ if __name__ == "__main__":
 #
     photdf['field']=photdf['field'].apply(parsePathForFieldnum)
 
-    fieldTarget = 77  # DEBUG
+    fieldTarget = lcData['field_id'][0]
     fieldCalInfo = photdf[photdf.field==fieldTarget]
+
+    if len(fieldCalInfo) == 0:
+        print('Field %d not in calibration database' % fieldTarget)
+        raise ValueError
+    else:
+        print('Using calibration data for field %d' % fieldTarget)
 #
-# iterate over lcData
+# iterate over lcData - use .apply
 #
-    for lcPoint in lcData.iterrows():
+
+    lcValid = lcData[(lcData.b_mag != -99) & (lcData.r_mag != -99)].copy()
+    nValidPts = lcValid.shape[0]
+    cal_r = np.zeros(nValidPts)
+    cal_g = np.zeros(nValidPts)
+
+    i = 0
+    for lcPoint in lcValid.iterrows():
        MACHO_V = lcPoint[1]['b_mag']
        MACHO_R = lcPoint[1]['r_mag']
 
        if MACHO_V - MACHO_R > LMC_CMD_split:
             betaRed = np.array([fieldCalInfo.rdbetag.values[0], fieldCalInfo.rdbetar.values[0], fieldCalInfo.rdzpg.values[0], fieldCalInfo.rdzpr.values[0]])
             cal_Red = fODR(betaRed, np.vstack((MACHO_R, MACHO_V)))
-            cal_g = cal_Red[0,0]
-            cal_r = cal_Red[1,0]
+            cal_g[i] = cal_Red[0,0]
+            cal_r[i] = cal_Red[1,0]
        else:
             betaBlue = np.array([fieldCalInfo.blbetag.values[0], fieldCalInfo.blbetar.values[0], fieldCalInfo.blzpg.values[0], fieldCalInfo.blzpr.values[0]])
             cal_Blue = fODR(betaBlue, np.vstack((MACHO_R, MACHO_V)))
-            cal_g = cal_Blue[0,0]
-            cal_r = cal_Blue[1,0]
+            cal_g[i] = cal_Blue[0,0]
+            cal_r[i] = cal_Blue[1,0]
 
-       print(cal_r, cal_g)
+       i += 1
+
+    lcValid['DECam_r'] = cal_r
+    lcValid['DECam_g'] = cal_g
+    lcValid.to_csv(lcOutFile, sep=';', index=False, float_format='%.4f')
 

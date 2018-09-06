@@ -12,7 +12,7 @@ pathRE = re.compile('.*\/F_(\d+)\/.*')
 LMC_CMD_split = 0.1   # split in MACHO_V - MACHO_R; separate fits on each side
 
 def usage():
-    print('you screwed up!')
+    print('Usage: calcCalibGR inpLC outLC')
     
 #
 # functions from fitMags.py
@@ -54,18 +54,14 @@ def loadLightCurve(lcFile):
 if __name__ == "__main__":
 
     narg = len(sys.argv)
-    if narg==4:
-        fieldTarget = int(sys.argv[1])
-        MACHO_R = float(sys.argv[2])
-        MACHO_V = float(sys.argv[3])
-        # make a one row dataframe
-    elif narg==3:
+    if narg==3:
         lcFile = sys.argv[1]
         lcOutFile = sys.argv[2]
-        lcData = loadLightCurve(lcFile)
     else:
         usage()
         raise ValueError
+
+    lcData = loadLightCurve(lcFile)
 
     calFile = StringIO(calibData())
     photdf = pd.read_csv(calFile,sep=' ')
@@ -90,26 +86,36 @@ if __name__ == "__main__":
     nValidPts = lcValid.shape[0]
     cal_r = np.zeros(nValidPts)
     cal_g = np.zeros(nValidPts)
+    cal_r_err = np.zeros(nValidPts)
+    cal_g_err = np.zeros(nValidPts)
 
     i = 0
     for lcPoint in lcValid.iterrows():
        MACHO_V = lcPoint[1]['b_mag']
        MACHO_R = lcPoint[1]['r_mag']
+       MACHO_Verr = lcPoint[1]['b_err']
+       MACHO_Rerr = lcPoint[1]['r_err']
 
        if MACHO_V - MACHO_R > LMC_CMD_split:
             betaRed = np.array([fieldCalInfo.rdbetag.values[0], fieldCalInfo.rdbetar.values[0], fieldCalInfo.rdzpg.values[0], fieldCalInfo.rdzpr.values[0]])
             cal_Red = fODR(betaRed, np.vstack((MACHO_R, MACHO_V)))
             cal_g[i] = cal_Red[0,0]
             cal_r[i] = cal_Red[1,0]
+            cal_g_err[i] = np.sqrt(((1-betaRed[0])*MACHO_Rerr)**2 + (betaRed[0]*MACHO_Verr)**2)
+            cal_r_err[i] = np.sqrt(((1-betaRed[1])*MACHO_Rerr)**2 + (betaRed[1]*MACHO_Verr)**2)
        else:
             betaBlue = np.array([fieldCalInfo.blbetag.values[0], fieldCalInfo.blbetar.values[0], fieldCalInfo.blzpg.values[0], fieldCalInfo.blzpr.values[0]])
             cal_Blue = fODR(betaBlue, np.vstack((MACHO_R, MACHO_V)))
             cal_g[i] = cal_Blue[0,0]
             cal_r[i] = cal_Blue[1,0]
+            cal_g_err[i] = np.sqrt(((1-betaBlue[0])*MACHO_Rerr)**2 + (betaBlue[0]*MACHO_Verr)**2)
+            cal_r_err[i] = np.sqrt(((1-betaBlue[1])*MACHO_Rerr)**2 + (betaBlue[1]*MACHO_Verr)**2)
 
        i += 1
 
     lcValid['DECam_r'] = cal_r
     lcValid['DECam_g'] = cal_g
-    lcValid.to_csv(lcOutFile, sep=';', index=False, float_format='%.4f')
+    lcValid['DECam_r_err'] = cal_r_err
+    lcValid['DECam_g_err'] = cal_g_err
+    lcValid.to_csv(lcOutFile, sep=';', index=False, float_format='%.4f', compression='gzip')
 

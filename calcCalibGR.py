@@ -1,5 +1,11 @@
 #!/usr/bin/env python
 
+"""
+Calibrates a MACHO lightcurve, either uncompressed or gzip compressed, adding columns
+for DECam_r, DECam_g, and their expected uncertainties.  Calibration data is imported
+from calibData.
+"""
+
 import sys
 import numpy as np
 import pandas as pd
@@ -39,14 +45,14 @@ def parsePathForFieldnum(fieldStr):
     match = pathRE.match(fieldStr)
     return(int(match.group(1)))
     
-def loadLightCurve(lcFile):
+def loadLightCurve(lcFile, compressType=None):
     #code to load file
 
     col_names = ['blank', 'field_id', 'tile_id', 'seq_n', 'obs_date', 'obs_id', 'side_of_pier', 'exp_time', 'airmass', 'r_mag', 'r_err', 'r_normsky', 'r_type', 'r_crowd', 'r_chi2', 'r_mpix', 'r_cosmicrf', 'r_amp', 'r_xpix', 'r_ypix', 'r_avesky', 'r_fwhm', 'r_tobs', 'r_cut', 'b_mag', 'b_err', 'b_normsky', 'b_type', 'b_crowd', 'b_chi2', 'b_mpix', 'b_cosmicrf', 'b_amp', 'b_xpix', 'b_ypix', 'b_avesky', 'b_fwhm', 'b_tobs', 'b_cut']
 
     use_cols = ['field_id', 'tile_id', 'seq_n', 'obs_date', 'obs_id', 'r_mag', 'r_err', 'b_mag', 'b_err']
 
-    data = pd.read_csv(lcFile,sep=';', names=col_names, usecols=use_cols, compression='gzip', na_filter=False)
+    data = pd.read_csv(lcFile,sep=';', names=col_names, usecols=use_cols, compression=compressType, na_filter=False)
 
     return data
 
@@ -61,7 +67,12 @@ if __name__ == "__main__":
         usage()
         raise ValueError
 
-    lcData = loadLightCurve(lcFile)
+    if lcFile.endswith('.gz'):
+        compressType = 'gzip'
+    else:
+        compressType = None
+
+    lcData = loadLightCurve(lcFile, compressType)
 
     calFile = StringIO(calibData())
     photdf = pd.read_csv(calFile,sep=' ')
@@ -78,6 +89,13 @@ if __name__ == "__main__":
         raise ValueError
     else:
         print('Using calibration data for field %d' % fieldTarget)
+
+    betaRed = np.array([fieldCalInfo.rdbetag.values[0], fieldCalInfo.rdbetar.values[0], fieldCalInfo.rdzpg.values[0], fieldCalInfo.rdzpr.values[0]])
+    betaBlue = np.array([fieldCalInfo.blbetag.values[0], fieldCalInfo.blbetar.values[0], fieldCalInfo.blzpg.values[0], fieldCalInfo.blzpr.values[0]])
+
+#    print('betaRed: ', betaRed)
+#    print('betaBlue: ', betaBlue)
+
 #
 # iterate over lcData - use .apply
 #
@@ -97,14 +115,12 @@ if __name__ == "__main__":
        MACHO_Rerr = lcPoint[1]['r_err']
 
        if MACHO_V - MACHO_R > LMC_CMD_split:
-            betaRed = np.array([fieldCalInfo.rdbetag.values[0], fieldCalInfo.rdbetar.values[0], fieldCalInfo.rdzpg.values[0], fieldCalInfo.rdzpr.values[0]])
             cal_Red = fODR(betaRed, np.vstack((MACHO_R, MACHO_V)))
             cal_g[i] = cal_Red[0,0]
             cal_r[i] = cal_Red[1,0]
             cal_g_err[i] = np.sqrt(((1-betaRed[0])*MACHO_Rerr)**2 + (betaRed[0]*MACHO_Verr)**2)
             cal_r_err[i] = np.sqrt(((1-betaRed[1])*MACHO_Rerr)**2 + (betaRed[1]*MACHO_Verr)**2)
        else:
-            betaBlue = np.array([fieldCalInfo.blbetag.values[0], fieldCalInfo.blbetar.values[0], fieldCalInfo.blzpg.values[0], fieldCalInfo.blzpr.values[0]])
             cal_Blue = fODR(betaBlue, np.vstack((MACHO_R, MACHO_V)))
             cal_g[i] = cal_Blue[0,0]
             cal_r[i] = cal_Blue[1,0]
@@ -117,5 +133,11 @@ if __name__ == "__main__":
     lcValid['DECam_g'] = cal_g
     lcValid['DECam_r_err'] = cal_r_err
     lcValid['DECam_g_err'] = cal_g_err
-    lcValid.to_csv(lcOutFile, sep=';', index=False, float_format='%.4f', compression='gzip')
+    
+    if lcOutFile.endswith('.gz'):
+        compressType = 'gzip'
+    else:
+        compressType = None
+
+    lcValid.to_csv(lcOutFile, sep=';', index=False, float_format='%.4f', compression=compressType)
 
